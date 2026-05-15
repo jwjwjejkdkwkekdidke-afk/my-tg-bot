@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 logging.basicConfig(level=logging.INFO)
 
 # --- СЕКРЕТНЫЕ ДАННЫЕ ИЗ ENV ---
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("TOKEN")
 UMONEY_CARD = os.getenv("UMONEY_CARD")
 SUPPORT_USER = os.getenv("SUPPORT_USER")
 ADMIN_ID = int(os.getenv("ADMIN_ID"))
