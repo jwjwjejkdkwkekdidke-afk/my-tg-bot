@@ -45,20 +45,26 @@ async def start(message: types.Message):
 async def buy(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
 
-    kb.row(types.InlineKeyboardButton(
-        text="🗓 1 месяц — 120₽",
-        callback_data="p_120"
-    ))
+    kb.row(
+        types.InlineKeyboardButton(
+            text="🗓 1 месяц — 120₽",
+            callback_data="pay_120"
+        )
+    )
 
-    kb.row(types.InlineKeyboardButton(
-        text="🗓 3 месяца — 500₽",
-        callback_data="p_500"
-    ))
+    kb.row(
+        types.InlineKeyboardButton(
+            text="🗓 3 месяца — 500₽",
+            callback_data="pay_500"
+        )
+    )
 
-    kb.row(types.InlineKeyboardButton(
-        text="⬅️ Назад",
-        callback_data="back"
-    ))
+    kb.row(
+        types.InlineKeyboardButton(
+            text="⬅️ Назад",
+            callback_data="back"
+        )
+    )
 
     await callback.message.edit_text(
         "💳 **Выберите тариф AuraVPN:**",
@@ -66,37 +72,33 @@ async def buy(callback: types.CallbackQuery):
         parse_mode="Markdown"
     )
 
-@dp.callback_query(F.data.startswith("check_"))
-async def check(callback: types.CallbackQuery):
+
+@dp.callback_query(F.data.startswith("pay_"))
+async def pay(callback: types.CallbackQuery):
     summ = callback.data.split("_")[1]
-    user = callback.from_user
 
-    await callback.answer("Заявка отправлена!", show_alert=True)
+    kb = InlineKeyboardBuilder()
 
-    await callback.message.answer(
-        f"⏳ **Заявка принята!**\n"
-        f"Скиньте чек сюда: {SUPPORT_USER}"
-    )
-
-    admin_kb = InlineKeyboardBuilder()
-    admin_kb.row(
+    kb.row(
         types.InlineKeyboardButton(
-            text="✅ Принять",
-            callback_data=f"adm_confirm_{user.id}"
-        ),
-        types.InlineKeyboardButton(
-            text="❌ Отклонить",
-            callback_data=f"adm_decline_{user.id}"
+            text="✅ Я оплатил",
+            callback_data=f"check_{summ}"
         )
     )
 
-    await bot.send_message(
-        ADMIN_ID,
-        f"💰 **НОВАЯ ОПЛАТА!**\n\n"
-        f"Юзер: {user.full_name} (@{user.username})\n"
-        f"ID: `{user.id}`\n"
-        f"Сумма: {summ}₽",
-        reply_markup=admin_kb.as_markup()
+    kb.row(
+        types.InlineKeyboardButton(
+            text="⬅️ Назад",
+            callback_data="buy"
+        )
+    )
+
+    await callback.message.edit_text(
+        f"💳 **Оплата: {summ}₽**\n"
+        f"ЮMoney/Карта: `{UMONEY_CARD}`\n\n"
+        "Переведите сумму и нажмите кнопку ниже для проверки.",
+        reply_markup=kb.as_markup(),
+        parse_mode="Markdown"
     )
 
 # --- ЛОГИКА ДРУГИХ КНОПОК ---
