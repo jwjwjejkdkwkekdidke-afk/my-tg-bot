@@ -45,19 +45,15 @@ async def start(message: types.Message):
 async def buy(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
 
-    kb.row(
-        types.InlineKeyboardButton(
-            text="🗓 1 месяц — 120₽",
-            callback_data="pay_120"
-        )
-    )
+   kb.row(types.InlineKeyboardButton(
+    text="🗓 1 месяц — 120₽",
+    callback_data="pay_120"
+))
 
-    kb.row(
-        types.InlineKeyboardButton(
-            text="🗓 3 месяца — 500₽",
-            callback_data="pay_500"
-        )
-    )
+kb.row(types.InlineKeyboardButton(
+    text="🗓 3 месяца — 500₽",
+    callback_data="pay_500"
+))
 
     kb.row(
         types.InlineKeyboardButton(
