@@ -44,27 +44,24 @@ async def start(message: types.Message):
 @dp.callback_query(F.data == "buy")
 async def buy(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="🗓 1 месяц — 300₽", callback_data="p_300"))
-    kb.row(types.InlineKeyboardButton(text="🗓 3 месяца — 800₽", callback_data="p_800"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
+
+    kb.row(types.InlineKeyboardButton(
+        text="🗓 1 месяц — 120₽",
+        callback_data="p_120"
+    ))
+
+    kb.row(types.InlineKeyboardButton(
+        text="🗓 3 месяца — 500₽",
+        callback_data="p_500"
+    ))
+
+    kb.row(types.InlineKeyboardButton(
+        text="⬅️ Назад",
+        callback_data="back"
+    ))
+
     await callback.message.edit_text(
         "💳 **Выберите тариф AuraVPN:**",
-        reply_markup=kb.as_markup(),
-        parse_mode="Markdown"
-    )
-
-@dp.callback_query(F.data.startswith("p_"))
-async def pay(callback: types.CallbackQuery):
-    summ = callback.data.split("_")[1]
-
-    kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{summ}"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
-
-    await callback.message.edit_text(
-        f"💳 **Оплата: {summ}₽**\n"
-        f"ЮMoney/Карта: `{UMONEY_CARD}`\n\n"
-        "Переведите сумму и нажмите кнопку ниже для проверки.",
         reply_markup=kb.as_markup(),
         parse_mode="Markdown"
     )
