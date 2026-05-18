@@ -10,7 +10,6 @@ logging.basicConfig(level=logging.INFO)
 
 TOKEN = os.getenv("TOKEN")
 UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
-SUPPORT_USER = os.getenv("SUPPORT_USER", "@support")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
 
 bot = Bot(token=TOKEN)
@@ -21,23 +20,13 @@ def main_kb():
     kb = InlineKeyboardBuilder()
 
     kb.row(types.InlineKeyboardButton(
-        text="💳 Купить подписку",
+        text="💳 Купить VPN",
         callback_data="buy"
-    ))
-
-    kb.row(types.InlineKeyboardButton(
-        text="👤 Мой профиль",
-        callback_data="profile"
     ))
 
     kb.row(types.InlineKeyboardButton(
         text="⚡️ Подключиться",
         callback_data="connect"
-    ))
-
-    kb.row(types.InlineKeyboardButton(
-        text="📦 Остальное",
-        callback_data="other"
     ))
 
     return kb.as_markup()
@@ -48,8 +37,8 @@ async def start(message: types.Message):
 
     text = (
         "👋 Добро пожаловать в AuraVPN\n\n"
-        "🌐 VPN без ограничений\n"
-        "📍 Быстрые сервера\n\n"
+        "🌐 Быстрый VPN без ограничений\n"
+        "📍 Стабильные сервера\n\n"
         "Выберите действие ниже."
     )
 
@@ -65,13 +54,23 @@ async def buy(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
 
     kb.row(types.InlineKeyboardButton(
-        text="🗓 1 месяц — 120₽",
-        callback_data="pay_120"
+        text="📅 7 дней — 39₽",
+        callback_data="pay_39"
     ))
 
     kb.row(types.InlineKeyboardButton(
-        text="🗓 3 месяца — 500₽",
-        callback_data="pay_500"
+        text="📅 30 дней — 99₽",
+        callback_data="pay_99"
+    ))
+
+    kb.row(types.InlineKeyboardButton(
+        text="📅 90 дней — 279₽",
+        callback_data="pay_279"
+    ))
+
+    kb.row(types.InlineKeyboardButton(
+        text="📅 180 дней — 549₽",
+        callback_data="pay_549"
     ))
 
     kb.row(types.InlineKeyboardButton(
@@ -80,7 +79,7 @@ async def buy(callback: types.CallbackQuery):
     ))
 
     await callback.message.edit_text(
-        "💳 Выберите тариф:",
+        "💳 Выберите тариф VPN:",
         reply_markup=kb.as_markup()
     )
 
@@ -105,9 +104,11 @@ async def pay(callback: types.CallbackQuery):
     ))
 
     await callback.message.edit_text(
-        f"💳 Оплата: {amount}₽\n\n"
-        f"Карта:\n{UMONEY_CARD}\n\n"
-        "После оплаты нажмите кнопку ниже.",
+        f"💳 Оплата VPN\n\n"
+        f"Сумма: {amount}₽\n\n"
+        f"💳 Карта для оплаты:\n"
+        f"{UMONEY_CARD}\n\n"
+        f"После оплаты нажмите кнопку «Я оплатил».",
         reply_markup=kb.as_markup()
     )
 
@@ -120,27 +121,18 @@ async def check(callback: types.CallbackQuery):
     amount = callback.data.split("_")[1]
     user = callback.from_user
 
-    await callback.message.answer(
-        f"✅ Заявка отправлена.\n\n"
-        f"Отправьте чек: {SUPPORT_USER}"
+    await callback.message.edit_text(
+        "✅ Оплата отправлена на проверку.\n\n"
+        "⏳ Ожидайте ваш VPN код.\n"
+        "Ключ придёт автоматически после проверки оплаты."
     )
 
     await bot.send_message(
         ADMIN_ID,
-        f"Новая оплата\n\n"
-        f"Пользователь: {user.full_name}\n"
-        f"ID: {user.id}\n"
-        f"Сумма: {amount}₽"
-    )
-
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "profile")
-async def profile(callback: types.CallbackQuery):
-
-    await callback.message.answer(
-        f"👤 Ваш ID: {callback.from_user.id}"
+        f"💸 Новая заявка на VPN\n\n"
+        f"👤 Пользователь: {user.full_name}\n"
+        f"🆔 ID: {user.id}\n"
+        f"💳 Сумма: {amount}₽"
     )
 
     await callback.answer()
@@ -150,17 +142,7 @@ async def profile(callback: types.CallbackQuery):
 async def connect(callback: types.CallbackQuery):
 
     await callback.message.answer(
-        "Скачайте HappVpn и вставьте ключ."
-    )
-
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "other")
-async def other(callback: types.CallbackQuery):
-
-    await callback.message.answer(
-        f"Поддержка: {SUPPORT_USER}"
+        "📲 Скачайте HappVPN и вставьте полученный ключ."
     )
 
     await callback.answer()
@@ -170,7 +152,7 @@ async def other(callback: types.CallbackQuery):
 async def back(callback: types.CallbackQuery):
 
     await callback.message.edit_text(
-        "Главное меню:",
+        "🏠 Главное меню:",
         reply_markup=main_kb()
     )
 
