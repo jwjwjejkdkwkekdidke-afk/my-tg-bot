@@ -78,23 +78,25 @@ async def pay(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# ПОЛЬЗОВАТЕЛЬ НАЖАЛ «Я ОПЛАТИЛ» -> ОТПРАВЛЯЕМ АДМИНУ КНОПКИ
+# ОБРАБОТКА НАЖАТИЯ ПОЛЬЗОВАТЕЛЕМ «Я ОПЛАТИЛ»
 @dp.callback_query(F.data.startswith("check_"))
 async def check(callback: types.CallbackQuery):
     amount = callback.data.split("_")[1]
     user = callback.from_user
 
+    # Изменяем текст пользователю, чтобы он видел статус проверки
     await callback.message.edit_text(
         "✅ Оплата отправлена на проверку.\n\n⏳ Ожидайте ваш VPN код.\nКлюч придёт автоматически после проверки оплаты."
     )
 
-    # Создаем кнопки для админа. В callback_data зашиваем действие и ID пользователя
+    # Создаем кнопки «Принять» и «Отклонить» для админа
     admin_kb = InlineKeyboardBuilder()
     admin_kb.row(
         types.InlineKeyboardButton(text="✅ Принять", callback_data=f"accept_{user.id}"),
         types.InlineKeyboardButton(text="❌ Отклонить", callback_data=f"decline_{user.id}")
     )
 
+    # Отправляем уведомление админу
     await bot.send_message(
         ADMIN_ID,
         f"💸 *Новая заявка на VPN*\n\n"
@@ -107,45 +109,45 @@ async def check(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# АДМИН НАЖАЛ «ПРИНЯТЬ»
+# ДЕЙСТВИЕ АДМИНА: НАЖАЛИ «ПРИНЯТЬ»
 @dp.callback_query(F.data.startswith("accept_"))
 async def admin_accept(callback: types.CallbackQuery):
     user_id = int(callback.data.split("_")[1])
 
-    # Отправляем сообщение пользователю
     try:
+        # Отправляем сообщение пользователю (здесь ваш общий ключ или инструкция)
         await bot.send_message(
             user_id,
             "✅ *Ваша оплата успешно подтверждена!*\n\n"
-            "🔑 Ваш ключ для подключения: `vless://your_key_here` \n"
-            "_(Инструкция по подключению доступна по кнопке в меню)_",
+            "🔑 Ваш ключ для подключения: `vless://your_key_here` \n\n"
+            "📲 Скопируйте ключ и вставьте его в приложение HappVPN.",
             parse_mode="Markdown"
         )
-        # Обновляем сообщение у админа, чтобы он видел, что заявка обработана
+        # Меняем текст сообщения у админа, убирая кнопки
         await callback.message.edit_text(f"{callback.message.text}\n\n🟢 *Статус: Одобрено*", parse_mode="Markdown")
     except Exception as e:
-        await callback.message.reply(f"❌ Не удалось отправить сообщение пользователю (возможно, заблокировал бота): {e}")
+        await callback.message.reply(f"❌ Ошибка отправки пользователю: {e}")
     
     await callback.answer()
 
 
-# АДМИН НАЖАЛ «ОТКЛОНИТЬ»
+# ДЕЙСТВИЕ АДМИНА: НАЖАЛИ «ОТКЛОНИТЬ»
 @dp.callback_query(F.data.startswith("decline_"))
 async def admin_decline(callback: types.CallbackQuery):
     user_id = int(callback.data.split("_")[1])
 
-    # Отправляем сообщение пользователю
     try:
+        # Уведомляем пользователя об отказе
         await bot.send_message(
             user_id,
             "❌ *Оплата не была подтверждена.*\n\n"
-            "Если произошла ошибка, пожалуйста, свяжитесь с администратором.",
+            "Если вы действительно оплатили, пожалуйста, свяжитесь с администратором.",
             parse_mode="Markdown"
         )
-        # Обновляем сообщение у админа
+        # Меняем текст сообщения у админа, убирая кнопки
         await callback.message.edit_text(f"{callback.message.text}\n\n🔴 *Статус: Отклонено*", parse_mode="Markdown")
     except Exception as e:
-        await callback.message.reply(f"❌ Не удалось отправить сообщение пользователю: {e}")
+        await callback.message.reply(f"❌ Ошибка отправки пользователю: {e}")
         
     await callback.answer()
 
@@ -167,4 +169,5 @@ async def main():
     await dp.start_polling(bot)
 
 
-if __name__ ==
+if __name__ == "__main__":
+    asyncio.run(main())
