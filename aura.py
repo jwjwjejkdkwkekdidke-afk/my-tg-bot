@@ -121,4 +121,83 @@ async def buy(callback: types.CallbackQuery):
 @dp.callback_query(F.data.startswith("pay_"))
 async def pay(callback: types.CallbackQuery):
 
-    amount = callback.
+    amount = callback.data.split("_")[1]
+
+    kb = InlineKeyboardBuilder()
+
+    kb.row(types.InlineKeyboardButton(
+        text="✅ Я оплатил",
+        callback_data=f"check_{amount}"
+    ))
+
+    kb.row(types.InlineKeyboardButton(
+        text="⬅️ Назад",
+        callback_data="buy"
+    ))
+
+    await callback.message.edit_text(
+        f"💳 Оплата VPN\n\n"
+        f"Сумма: {amount}₽\n\n"
+        f"💳 Карта для оплаты:\n"
+        f"{UMONEY_CARD}\n\n"
+        f"После оплаты нажмите кнопку «Я оплатил».",
+        reply_markup=kb.as_markup()
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("check_"))
+async def check(callback: types.CallbackQuery):
+
+    amount = callback.data.split("_")[1]
+    user = callback.from_user
+
+    await callback.message.edit_text(
+        "✅ Оплата отправлена на проверку.\n\n"
+        "⏳ Ожидайте ваш VPN код.\n"
+        "Ключ придёт автоматически после проверки оплаты."
+    )
+
+    await bot.send_message(
+        ADMIN_ID,
+        f"💸 Новая заявка на VPN\n\n"
+        f"👤 Пользователь: {user.full_name}\n"
+        f"🆔 ID: {user.id}\n"
+        f"💳 Сумма: {amount}₽"
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "connect")
+async def connect(callback: types.CallbackQuery):
+
+    await callback.message.answer(
+        "📲 Скачайте HappVPN и вставьте полученный ключ."
+    )
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "back")
+async def back(callback: types.CallbackQuery):
+
+    await callback.message.edit_text(
+        "🏠 Главное меню:",
+        reply_markup=main_kb()
+    )
+
+    await callback.answer()
+
+
+async def main():
+
+    print("BOT STARTED")
+
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+
+    asyncio.run(main())
