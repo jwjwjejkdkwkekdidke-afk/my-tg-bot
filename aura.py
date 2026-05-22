@@ -27,7 +27,7 @@ def get_user_data(user_id):
 
 
 def main_kb():
-    """Главная постоянная клавиатура внизу экрана (строго 3 кнопки)"""
+    """Постоянная клавиатура внизу экрана (строго 3 кнопки)"""
     kb = ReplyKeyboardBuilder()
     kb.row(types.KeyboardButton(text="💳 Купить VPN"))
     kb.row(types.KeyboardButton(text="💰 Заработать с AuraVPN"))
@@ -69,8 +69,7 @@ async def start(message: types.Message):
     await message.answer(text, parse_mode="Markdown", reply_markup=main_kb())
 
 
-# --- ОБРАБОТКА НИЖНЕЙ КЛАВИАТУРЫ (MESSAGE) ---
-
+# 1. РАЗДЕЛ: ПРОФИЛЬ (НАЖАТИЕ НА НИЖНЮЮ КНОПКУ)
 @dp.message(F.text == "👤 Профиль")
 async def profile_message(message: types.Message):
     user = message.from_user
@@ -86,4 +85,22 @@ async def profile_message(message: types.Message):
     )
     
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в меню", callback_
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="back"))
+    
+    await message.answer(profile_text, parse_mode="Markdown", reply_markup=kb.as_markup())
+
+
+# 2. РАЗДЕЛ: ЗАРАБОТАТЬ С AURAVPN (НАЖАТИЕ НА НИЖНЮЮ КНОПКУ)
+@dp.message(F.text == "💰 Заработать с AuraVPN")
+async def earn_message(message: types.Message):
+    user = message.from_user
+    bot_info = await bot.get_me()
+    
+    user_data = get_user_data(user.id)
+    ref_count = len(user_data["referrals"])
+    ref_balance = user_data["balance"]
+    
+    ref_link = f"https://t.me/{bot_info.username}?start={user.id}"
+
+    text = (
+        f"💰 *Партнерская программа AuraVPN
