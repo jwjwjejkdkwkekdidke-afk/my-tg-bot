@@ -1,45 +1,33 @@
+import os
 import asyncio
 import logging
-import os
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from dotenv import load_dotenv
-
-# =========================
-# Загрузка .env
-# =========================
-load_dotenv()
-
-TOKEN = os.getenv("BOT_TOKEN")
-UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
-
-if not TOKEN:
-    raise ValueError("❌ BOT_TOKEN не найден в .env файле")
 
 logging.basicConfig(level=logging.INFO)
+
+TOKEN = os.getenv("TOKEN", "ТВОЙ_ТОКЕН")
+UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# =========================
-# Временная БД
-# =========================
+# Временная база данных для рефералов
 referrals_db = {}
 
 
 def get_user_data(user_id: int):
+    """Инициализация данных пользователя в нашей мини-БД"""
     if user_id not in referrals_db:
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
 
 
-# =========================
-# Клавиатура
-# =========================
 def main_kb():
+    """Главное меню бота (строго 3 кнопки)"""
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="💳 Купить VPN", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="💰 Заработать с AuraVPN", callback_data="earn"))
@@ -47,140 +35,253 @@ def main_kb():
     return kb.as_markup()
 
 
-# =========================
-# START
-# =========================
 @dp.message(Command("start"))
 async def start(message: types.Message):
     args = message.text.split()
     user_id = message.from_user.id
-
+    
     get_user_data(user_id)
-
-    # Рефералка
+    
     if len(args) > 1:
+        referrer_id = args[1]
         try:
-            referrer_id = int(args[1])
+            referrer_id = int(referrer_id)
             if referrer_id != user_id:
                 ref_data = get_user_data(referrer_id)
-
+                
                 if user_id not in ref_data["referrals"]:
                     ref_data["referrals"].add(user_id)
-
                     try:
                         await bot.send_message(
-                            referrer_id,
-                            "🎉 Новый пользователь по вашей ссылке!"
+                            referrer_id, 
+                            "🎉 По вашей реферальной ссылке зарегистрировался новый пользователь!"
                         )
                     except Exception:
                         pass
         except ValueError:
             pass
 
-    await message.answer(
-        "🏠 Главное меню\n\n"
+    text = (
+        "🏠 **Главное меню**\n\n"
         "👋 Добро пожаловать в AuraVPN\n"
         "🌐 Быстрый VPN без ограничений\n\n"
-        "Выберите действие:",
-        reply_markup=main_kb()
+        "Выберите действие ниже:"
     )
+    await message.answer(text, parse_mode="Markdown", reply_markup=main_kb())
 
 
-# =========================
-# ДОБАВЛЕНО: КУПИТЬ VPN
-# =========================
-@dp.callback_query(F.data == "buy")
-async def buy_vpn(callback: types.CallbackQuery):
-    # Текст с реквизитами (карту берем из .env, которую вы указали выше)
-    text = (
-        "💳 Оплата подписки AuraVPN\n\n"
-        "Стоимость: 150₽ / месяц\n\n"
-        f"Для оплаты переведите сумму на карту ЮMoney:\n"
-        f"`{UMONEY_CARD}`\n\n"
-        "После оплаты отправьте скриншот чека в поддержку администратору."
-    )
-    
-    kb = InlineKeyboardBuilder()
-    # Кнопка «Проверить оплату» или «Связаться» (опционально)
-    if ADMIN_ID != 0:
-        kb.row(types.InlineKeyboardButton(text="💬 Написать админу", url=f"tg://user?id={ADMIN_ID}"))
-    
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
-
-    # Используем parse_mode="Markdown", чтобы номер карты можно было скопировать в один клик
-    await callback.message.edit_text(text, reply_markup=kb.as_markup(), parse_mode="Markdown")
-    await callback.answer()
-
-
-# =========================
-# ПРОФИЛЬ
-# =========================
+# 1. РАЗДЕЛ: ПРОФИЛЬ
 @dp.callback_query(F.data == "profile")
 async def profile(callback: types.CallbackQuery):
     user = callback.from_user
-    data = get_user_data(user.id)
-
-    text = (
-        f"👤 Ваш профиль\n\n"
+    user_data = get_user_data(user.id)
+    ref_count = len(user_data["referrals"])
+    
+    profile_text = (
+        f"👤 *Ваш профиль:*\n\n"
         f"📝 Имя: {user.full_name}\n"
-        f"🆔 ID: {user.id}\n"
-        f"📅 Подписка: не активна\n"
-        f"👥 Рефералы: {len(data['referrals'])}"
+        f"🆔 ID: `{user.id}`\n"
+        f"📅 Подписка: Не активна\n"
+        f"👥 Приглашено друзей: {ref_count}"
     )
-
+    
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
-
-    await callback.message.edit_text(text, reply_markup=kb.as_markup())
+    
+    await callback.message.edit_text(profile_text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 
-# =========================
-# ЗАРАБОТОК
-# =========================
+# 2. РАЗДЕЛ: ЗАРАБОТАТЬ С AURAVPN
 @dp.callback_query(F.data == "earn")
 async def earn(callback: types.CallbackQuery):
     user = callback.from_user
     bot_info = await bot.get_me()
-
-    data = get_user_data(user.id)
-
+    
+    user_data = get_user_data(user.id)
+    ref_count = len(user_data["referrals"])
+    ref_balance = user_data["balance"]
+    
     ref_link = f"https://t.me/{bot_info.username}?start={user.id}"
 
     text = (
-        "💰 Партнёрская программа\n\n"
-        "Приглашай друзей и получай %\n\n"
-        f"👥 Рефералов: {len(data['referrals'])}\n"
-        f"💸 Баланс: {data['balance']}₽\n\n"
-        f"🔗 Твоя ссылка:\n{ref_link}"
+        f"💰 *Партнерская программа AuraVPN*\n\n"
+        f"Приглашайте друзей и зарабатывайте 30% с каждого пополнения!\n\n"
+        f"Например:\n"
+        f"— Друзья перешли по вашей ссылке и потратили 1000₽\n"
+        f"— Вы получаете 300.0₽ и выводите на КАРТУ/USDT!\n\n"
+        f"📊 *Ваша статистика:*\n"
+        f"👥 Количество приглашённых: *{ref_count}* чел.\n"
+        f"💵 Ваш баланс: *{ref_balance}₽*\n\n"
+        f"🔗 *Ваша реферальная ссылка:*\n"
+        f"`{ref_link}`\n\n"
+        f"_Нажмите на ссылку выше, чтобы скопировать её._"
     )
 
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
 
-    await callback.message.edit_text(text, reply_markup=kb.as_markup())
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 
-# =========================
-# BACK
-# =========================
-@dp.callback_query(F.data == "back")
-async def back(callback: types.CallbackQuery):
+# 3. РАЗДЕЛ: КУПИТЬ VPN (ТАРИФЫ)
+@dp.callback_query(F.data == "buy")
+async def buy(callback: types.CallbackQuery):
+    kb = InlineKeyboardBuilder()
+    kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="device_7"))
+    kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="device_30"))
+    kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="device_90"))
+    kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="device_180"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
+
+    await callback.message.edit_text("💳 Выберите срок действия VPN:", reply_markup=kb.as_markup())
+    await callback.answer()
+
+
+# ВЫБОР КОЛИЧЕСТВА УСТРОЙСТВ
+@dp.callback_query(F.data.startswith("device_"))
+async def choose_devices(callback: types.CallbackQuery):
+    days = callback.data.split("_")[1]
+    
+    kb = InlineKeyboardBuilder()
+    kb.row(types.InlineKeyboardButton(text="📱 1 устройство (Базовая цена)", callback_data=f"pay_{days}_1"))
+    kb.row(types.InlineKeyboardButton(text="📱📱 2 устройства (+50%)", callback_data=f"pay_{days}_2"))
+    kb.row(types.InlineKeyboardButton(text="💻📱🖥 3 устройства (+100%)", callback_data=f"pay_{days}_3"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Изменить тариф", callback_data="buy"))
+
+    await callback.message.edit_text("📱 Выберите количество устройств для подключения:", reply_markup=kb.as_markup())
+    await callback.answer()
+
+
+# СТРАНИЦА ОПЛАТЫ С ДИНАМИЧЕСКИМ РАСЧЕТОМ
+@dp.callback_query(F.data.startswith("pay_"))
+async def pay(callback: types.CallbackQuery):
+    _, days, devices = callback.data.split("_")
+    devices = int(devices)
+    
+    base_prices = {"7": 39, "30": 99, "90": 279, "180": 549}
+    base_price = base_prices[days]
+    
+    if devices == 1:
+        total_amount = base_price
+    elif devices == 2:
+        total_amount = int(base_price * 1.5)
+    else:
+        total_amount = base_price * 2
+
+    kb = InlineKeyboardBuilder()
+    kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{total_amount}"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад к устройствам", callback_data=f"device_{days}"))
+
     await callback.message.edit_text(
-        "🏠 Главное меню\n\n"
-        "👋 Добро пожаловать в AuraVPN\n"
-        "🌐 Быстрый VPN без ограничений\n\n"
-        "Выберите действие:",
-        reply_markup=main_kb()
+        f"💳 *Оплата VPN*\n\n"
+        f"📅 Срок: {days} дней\n"
+        f"📱 Устройств: {devices}\n"
+        f"💰 Итоговая сумма: *{total_amount}₽*\n\n"
+        f"💳 Карта для оплаты:\n`{UMONEY_CARD}`\n\n"
+        f"После оплаты нажмите кнопку «Я оплатил».",
+        parse_mode="Markdown",
+        reply_markup=kb.as_markup()
     )
     await callback.answer()
 
 
-# =========================
-# Запуск бота
-# =========================
+# ПРОВЕРКА ОПЛАТЫ АДМИНОМ
+@dp.callback_query(F.data.startswith("check_"))
+async def check(callback: types.CallbackQuery):
+    amount = callback.data.split("_")[1]
+    user = callback.from_user
+
+    await callback.message.edit_text(
+        "✅ Оплата отправлена на проверку.\n\n⏳ Ожидайте ваш VPN код.\nКлюч придёт автоматически после проверки оплаты."
+    )
+
+    admin_kb = InlineKeyboardBuilder()
+    admin_kb.row(
+        types.InlineKeyboardButton(text="✅ Принять", callback_data=f"accept_{user.id}"),
+        types.InlineKeyboardButton(text="❌ Отклонить", callback_data=f"decline_{user.id}")
+    )
+
+    await bot.send_message(
+        ADMIN_ID,
+        f"💸 *Новая заявка на VPN*\n\n"
+        f"👤 Пользователь: {user.full_name}\n"
+        f"🆔 ID: `{user.id}`\n"
+        f"💳 Сумма к проверке: {amount}₽",
+        parse_mode="Markdown",
+        reply_markup=admin_kb.as_markup()
+    )
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("accept_"))
+async def admin_accept(callback: types.CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+
+    try:
+        await bot.send_message(
+            user_id,
+            "✅ *Ваша оплата успешно подтверждена!*\n\n"
+            "🔑 *Ваш ключ HappVPN:*\n\n"
+            "`https://brandsummerown.online/apx/ppmjdX4AKTwheNf_`\n\n"
+            "📲 Как подключить:\n"
+            "1️⃣ Откройте HappVPN\n"
+            "2️⃣ Нажмите «Импорт подписки»\n"
+            "3️⃣ Вставьте ключ\n"
+            "4️⃣ Подключитесь\n\n"
+            "🚀 VPN успешно активирован.",
+            parse_mode="Markdown",
+            disable_web_page_preview=True
+        )
+
+        await callback.message.edit_text(
+            f"{callback.message.text}\n\n🟢 *Статус: Одобрено*",
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        await callback.message.reply(f"❌ Ошибка отправки пользователю: {e}")
+
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("decline_"))
+async def admin_decline(callback: types.CallbackQuery):
+    user_id = int(callback.data.split("_")[1])
+
+    try:
+        await bot.send_message(
+            user_id,
+            "❌ *Оплата не была подтверждена.*\n\n"
+            "Если вы действительно оплатили, пожалуйста, свяжитесь с администратором.",
+            parse_mode="Markdown"
+        )
+
+        await callback.message.edit_text(
+            f"{callback.message.text}\n\n🔴 *Статус: Отклонено*",
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        await callback.message.reply(f"❌ Ошибка отправки пользователю: {e}")
+
+    await callback.answer()
+
+
+# КНОПКА ВОЗВРАТА В ГЛАВНОЕ МЕНЮ
+@dp.callback_query(F.data == "back")
+async def back(callback: types.CallbackQuery):
+    text = (
+        "🏠 **Главное меню**\n\n"
+        "👋 Добро пожаловать в AuraVPN\n"
+        "🌐 Быстрый VPN без ограничений\n\n"
+        "Выберите действие ниже:"
+    )
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=main_kb())
+    await callback.answer()
+
+
 async def main():
+    print("BOT STARTED")
     await dp.start_polling(bot)
 
 
