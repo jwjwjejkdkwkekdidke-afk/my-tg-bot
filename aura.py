@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
 
 # =========================
-# загрузка .env
+# Загрузка .env
 # =========================
 load_dotenv()
 
@@ -25,7 +25,7 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 # =========================
-# временная БД
+# Временная БД
 # =========================
 referrals_db = {}
 
@@ -37,7 +37,7 @@ def get_user_data(user_id: int):
 
 
 # =========================
-# клавиатура
+# Клавиатура
 # =========================
 def main_kb():
     kb = InlineKeyboardBuilder()
@@ -57,7 +57,7 @@ async def start(message: types.Message):
 
     get_user_data(user_id)
 
-    # рефералка
+    # Рефералка
     if len(args) > 1:
         try:
             referrer_id = int(args[1])
@@ -84,6 +84,32 @@ async def start(message: types.Message):
         "Выберите действие:",
         reply_markup=main_kb()
     )
+
+
+# =========================
+# ДОБАВЛЕНО: КУПИТЬ VPN
+# =========================
+@dp.callback_query(F.data == "buy")
+async def buy_vpn(callback: types.CallbackQuery):
+    # Текст с реквизитами (карту берем из .env, которую вы указали выше)
+    text = (
+        "💳 Оплата подписки AuraVPN\n\n"
+        "Стоимость: 150₽ / месяц\n\n"
+        f"Для оплаты переведите сумму на карту ЮMoney:\n"
+        f"`{UMONEY_CARD}`\n\n"
+        "После оплаты отправьте скриншот чека в поддержку администратору."
+    )
+    
+    kb = InlineKeyboardBuilder()
+    # Кнопка «Проверить оплату» или «Связаться» (опционально)
+    if ADMIN_ID != 0:
+        kb.row(types.InlineKeyboardButton(text="💬 Написать админу", url=f"tg://user?id={ADMIN_ID}"))
+    
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
+
+    # Используем parse_mode="Markdown", чтобы номер карты можно было скопировать в один клик
+    await callback.message.edit_text(text, reply_markup=kb.as_markup(), parse_mode="Markdown")
+    await callback.answer()
 
 
 # =========================
@@ -142,14 +168,17 @@ async def earn(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "back")
 async def back(callback: types.CallbackQuery):
     await callback.message.edit_text(
-        "🏠 Главное меню",
+        "🏠 Главное меню\n\n"
+        "👋 Добро пожаловать в AuraVPN\n"
+        "🌐 Быстрый VPN без ограничений\n\n"
+        "Выберите действие:",
         reply_markup=main_kb()
     )
     await callback.answer()
 
 
 # =========================
-# запуск бота
+# Запуск бота
 # =========================
 async def main():
     await dp.start_polling(bot)
