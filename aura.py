@@ -1,36 +1,45 @@
 import asyncio
 import logging
+import os
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from dotenv import load_dotenv
+
+# =========================
+# загрузка .env
+# =========================
+load_dotenv()
+
+TOKEN = os.getenv("BOT_TOKEN")
+UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+
+if not TOKEN:
+    raise ValueError("❌ BOT_TOKEN не найден в .env файле")
 
 logging.basicConfig(level=logging.INFO)
-
-# =========================================================
-# ⚙️ НАСТРОЙКА БОТА (ИЗМЕНИ ЭТИ ДАННЫЕ)
-# =========================================================
-TOKEN = "СЮДА_ВСТАВЬ_ТОКЕН_ОТ_BOTFATHER"  # Обязательно внутри кавычек!
-UMONEY_CARD = "0000 0000 0000 0000"         # Номер твоей карты для оплаты
-ADMIN_ID = 123456789                        # Твой числовой Telegram ID (без кавычек)
-# =========================================================
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Временная база данных для рефералов
+# =========================
+# временная БД
+# =========================
 referrals_db = {}
 
 
 def get_user_data(user_id: int):
-    """Инициализация данных пользователя в мини-БД"""
     if user_id not in referrals_db:
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
 
 
+# =========================
+# клавиатура
+# =========================
 def main_kb():
-    """Главное инлайн-меню (строго 3 функции)"""
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="💳 Купить VPN", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="💰 Заработать с AuraVPN", callback_data="earn"))
@@ -38,79 +47,113 @@ def main_kb():
     return kb.as_markup()
 
 
+# =========================
+# START
+# =========================
 @dp.message(Command("start"))
 async def start(message: types.Message):
     args = message.text.split()
     user_id = message.from_user.id
-    
+
     get_user_data(user_id)
-    
+
+    # рефералка
     if len(args) > 1:
-        referrer_id = args[1]
         try:
-            referrer_id = int(referrer_id)
+            referrer_id = int(args[1])
             if referrer_id != user_id:
                 ref_data = get_user_data(referrer_id)
+
                 if user_id not in ref_data["referrals"]:
                     ref_data["referrals"].add(user_id)
+
                     try:
                         await bot.send_message(
-                            referrer_id, 
-                            "🎉 По вашей реферальной ссылке зарегистрировался новый пользователь!"
+                            referrer_id,
+                            "🎉 Новый пользователь по вашей ссылке!"
                         )
                     except Exception:
                         pass
         except ValueError:
             pass
 
-    text = (
-        "🏠 **Главное меню**\n\n"
+    await message.answer(
+        "🏠 Главное меню\n\n"
         "👋 Добро пожаловать в AuraVPN\n"
         "🌐 Быстрый VPN без ограничений\n\n"
-        "Выберите действие ниже:"
+        "Выберите действие:",
+        reply_markup=main_kb()
     )
-    await message.answer(text, parse_mode="Markdown", reply_markup=main_kb())
 
 
-# 1. РАЗДЕЛ: ПРОФИЛЬ
+# =========================
+# ПРОФИЛЬ
+# =========================
 @dp.callback_query(F.data == "profile")
 async def profile(callback: types.CallbackQuery):
     user = callback.from_user
-    user_data = get_user_data(user.id)
-    ref_count = len(user_data["referrals"])
-    
-    profile_text = (
-        f"👤 *Ваш профиль:*\n\n"
+    data = get_user_data(user.id)
+
+    text = (
+        f"👤 Ваш профиль\n\n"
         f"📝 Имя: {user.full_name}\n"
-        f"🆔 ID: `{user.id}`\n"
-        f"📅 Подписка: Не активна\n"
-        f"👥 Приглашено друзей: {ref_count}"
+        f"🆔 ID: {user.id}\n"
+        f"📅 Подписка: не активна\n"
+        f"👥 Рефералы: {len(data['referrals'])}"
     )
-    
+
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
-    
-    await callback.message.edit_text(profile_text, parse_mode="Markdown", reply_markup=kb.as_markup())
+
+    await callback.message.edit_text(text, reply_markup=kb.as_markup())
     await callback.answer()
 
 
-# 2. РАЗДЕЛ: ЗАРАБОТАТЬ С AURAVPN
+# =========================
+# ЗАРАБОТОК
+# =========================
 @dp.callback_query(F.data == "earn")
 async def earn(callback: types.CallbackQuery):
     user = callback.from_user
     bot_info = await bot.get_me()
-    
-    user_data = get_user_data(user.id)
-    ref_count = len(user_data["referrals"])
-    ref_balance = user_data["balance"]
-    
+
+    data = get_user_data(user.id)
+
     ref_link = f"https://t.me/{bot_info.username}?start={user.id}"
 
     text = (
-        f"💰 *Партнерская программа AuraVPN*\n\n"
-        f"Приглашайте друзей и зарабатывайте 30% с каждого пополнения!\n\n"
-        f"Например:\n"
-        f"— Друзья перешли по вашей ссылке и потратили 1000₽\n"
-        f"— Вы получаете 300.0₽ и выводите на КАРТУ/USDT!\n\n"
-        f"📊 *Ваша статистика:*\n"
-        f"👥 Количество приглашённых: *{ref_
+        "💰 Партнёрская программа\n\n"
+        "Приглашай друзей и получай %\n\n"
+        f"👥 Рефералов: {len(data['referrals'])}\n"
+        f"💸 Баланс: {data['balance']}₽\n\n"
+        f"🔗 Твоя ссылка:\n{ref_link}"
+    )
+
+    kb = InlineKeyboardBuilder()
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
+
+    await callback.message.edit_text(text, reply_markup=kb.as_markup())
+    await callback.answer()
+
+
+# =========================
+# BACK
+# =========================
+@dp.callback_query(F.data == "back")
+async def back(callback: types.CallbackQuery):
+    await callback.message.edit_text(
+        "🏠 Главное меню",
+        reply_markup=main_kb()
+    )
+    await callback.answer()
+
+
+# =========================
+# запуск бота
+# =========================
+async def main():
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
