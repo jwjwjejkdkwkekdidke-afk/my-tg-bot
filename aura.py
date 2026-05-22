@@ -18,36 +18,26 @@ dp = Dispatcher()
 # Временная база данных для рефералов
 referrals_db = {}
 
-# Прямая ссылка на картинку-баннер личного кабинета
-# Ты можешь загрузить свою картинку в любой открытый фотохостинг или телеграм-канал и вставить сюда ссылку
-BANNER_URL = "https://raw.githubusercontent.com/aiogram/aiogram/dev/assets/logo.png"
+# Базовые цены на тарифы (за 1 устройство)
+BASE_PRICES = {
+    "7": 39,
+    "30": 99,
+    "90": 279,
+    "180": 549
+}
 
-
-def get_profile_text(user_id: int, user_name: str) -> str:
-    """Функция генерации красивого текста профиля в одном стиле"""
-    ref_count = len(referrals_db.get(user_id, set()))
-    return (
-        f"👤 **Профиль {user_name}:** 💯\n\n"
-        f"➖ **ID:** `{user_id}`\n"
-        f"➖ **Баланс:** 0 ₽ RUB\n"
-        f"➖ **К-во подписок:** 0\n"
-        f"➖ **Приглашено друзей:** {ref_count}"
-    )
-
-
-def profile_kb():
-    """Вертикальное меню кнопок личного кабинета"""
+def main_kb():
+    """Главное меню бота (в точности 3 функции)"""
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="➕ Купить новую подписку", callback_data="buy"))
-    kb.row(types.InlineKeyboardButton(text="🎁 Подарить другу", callback_data="gift_friend"))
+    kb.row(types.InlineKeyboardButton(text="💳 Купить VPN", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="💰 Заработать с AuraVPN", callback_data="earn"))
-    kb.row(types.InlineKeyboardButton(text="💬 О сервисе", callback_data="about"))
+    kb.row(types.InlineKeyboardButton(text="👤 Профиль", callback_data="profile"))
     return kb.as_markup()
 
 
 @dp.message(Command("start"))
 async def start(message: types.Message):
-    # Логика реферальной системы при переходе по ссылке
+    # Реферальная система при первом переходе
     args = message.text.split()
     user_id = message.from_user.id
     
@@ -64,47 +54,44 @@ async def start(message: types.Message):
                     try:
                         await bot.send_message(
                             referrer_id, 
-                            f"🎉 По вашей реферальной ссылке зарегистрировался новый пользователь!"
+                            "🎉 По вашей реферальной ссылке зарегистрировался новый пользователь!"
                         )
                     except Exception:
                         pass
         except ValueError:
             pass
 
-    # Теперь сразу после /start бот присылает ЛИЧНЫЙ КАБИНЕТ с баннером
-    await message.answer_photo(
-        photo=BANNER_URL,
-        caption=get_profile_text(user_id, message.from_user.first_name),
-        parse_mode="Markdown",
-        reply_markup=profile_kb()
+    text = (
+        "🏠 **Главное меню**\n\n"
+        "👋 Добро пожаловать в AuraVPN\n"
+        "🌐 Быстрый VPN без ограничений\n\n"
+        "Выберите действие ниже:"
     )
+    await message.answer(text, parse_mode="Markdown", reply_markup=main_kb())
 
 
+# 1. РАЗДЕЛ: ПРОФИЛЬ
 @dp.callback_query(F.data == "profile")
 async def profile(callback: types.CallbackQuery):
-    """Возврат в меню профиля из других вкладок"""
     user = callback.from_user
+    ref_count = len(referrals_db.get(user.id, set()))
     
-    # Если мы уже находимся в сообщении с фото, просто обновляем его текст и кнопки
-    if callback.message.photo:
-        await callback.message.edit_caption(
-            caption=get_profile_text(user.id, user.first_name),
-            parse_mode="Markdown",
-            reply_markup=profile_kb()
-        )
-    else:
-        # Если вдруг фото не было, удаляем старое сообщение и шлем заново профиль
-        await callback.message.delete()
-        await callback.message.answer_photo(
-            photo=BANNER_URL,
-            caption=get_profile_text(user.id, user.first_name),
-            parse_mode="Markdown",
-            reply_markup=profile_kb()
-        )
+    profile_text = (
+        f"👤 *Ваш профиль:*\n\n"
+        f"📝 Имя: {user.full_name}\n"
+        f"🆔 ID: `{user.id}`\n"
+        f"📅 Подписка: Не активна\n"
+        f"👥 Приглашено друзей: {ref_count}"
+    )
+    
+    kb = InlineKeyboardBuilder()
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
+    
+    await callback.message.edit_text(profile_text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 
-# Раздел: Заработать (Реферальная ссылка)
+# 2. РАЗДЕЛ: ЗАРАБОТАТЬ (РЕФЕРАЛКА)
 @dp.callback_query(F.data == "earn")
 async def earn(callback: types.CallbackQuery):
     user = callback.from_user
@@ -115,84 +102,83 @@ async def earn(callback: types.CallbackQuery):
 
     text = (
         f"💰 *Партнерская программа AuraVPN*\n\n"
-        f"Приглашайте друзей и получайте бонусы на свой баланс для оплаты подписки!\n\n"
+        f"Приглашайте друзей и получайте бонусы на свой баланс!\n\n"
         f"👤 Вы пригласили: *{ref_count}* чел.\n\n"
         f"🔗 *Ваша реферальная ссылка:*\n"
         f"`{ref_link}`\n\n"
-        f"_Нажмите на ссылку, чтобы скопировать её._"
+        f"_Нажмите на ссылку выше, чтобы скопировать её._"
     )
 
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
 
-    await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 
-# Раздел: О сервисе
-@dp.callback_query(F.data == "about")
-async def about(callback: types.CallbackQuery):
-    text = (
-        "💬 *О сервисе AuraVPN*\n\n"
-        "🚀 **AuraVPN** — это надежный и высокоскоростной VPN-сервис, созданный для вашей безопасности в сети.\n\n"
-        "🔒 Мы используем современные протоколы шифрования, которые гарантируют защиту личных данных, "
-        "обход любых блокировок и стабильное подключение без просадки скорости.\n\n"
-        "🌍 Наши преимущества:\n"
-        "• Высокая скорость до 1 Гбит/с\n"
-        "• Нет логов и отслеживания трафика\n"
-        "• Простая настройка в пару кликов"
-    )
-    
-    kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
-
-    await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
-    await callback.answer()
-
-
-# Заглушка для подарка
-@dp.callback_query(F.data == "gift_friend")
-async def gift_friend(callback: types.CallbackQuery):
-    kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
-    
-    await callback.message.edit_caption(
-        caption="🎁 Функция отправки подарка другу находится в разработке.", 
-        reply_markup=kb.as_markup()
-    )
-    await callback.answer()
-
-
-# Покупка VPN (Тарифы)
+# 3. РАЗДЕЛ: КУПИТЬ VPN (ШАГ 1: ВЫБОР ТАРИФА)
 @dp.callback_query(F.data == "buy")
 async def buy(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="pay_39"))
-    kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="pay_99"))
-    kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="pay_279"))
-    kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_549"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
+    kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="device_7"))
+    kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="device_30"))
+    kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="device_90"))
+    kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="device_180"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
 
-    # Так как это финансовое меню, мы удаляем медиа-карточку профиля, переходя на чистый текст оплаты
-    await callback.message.delete()
-    await callback.message.answer("💳 Выберите тариф VPN:", reply_markup=kb.as_markup())
+    await callback.message.edit_text("💳 Выберите срок действия VPN:", reply_markup=kb.as_markup())
     await callback.answer()
 
 
+# ШАГ 2: ВЫБОР КОЛИЧЕСТВА УСТРОЙСТВ
+@dp.callback_query(F.data.startswith("device_"))
+async def choose_devices(callback: types.CallbackQuery):
+    days = callback.data.split("_")[1]
+    
+    kb = InlineKeyboardBuilder()
+    # callback_data передает формат: pay_Срок_КоличествоУстройств
+    kb.row(types.InlineKeyboardButton(text="📱 1 устройство (Базовая цена)", callback_data=f"pay_{days}_1"))
+    kb.row(types.InlineKeyboardButton(text="📱📱 2 устройства (+50% к цене)", callback_data=f"pay_{days}_2"))
+    kb.row(types.InlineKeyboardButton(text="💻📱🖥 3 устройства (+100% к цене)", callback_data=f"pay_{days}_3"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Изменить тариф", callback_data="buy"))
+
+    await callback.message.edit_text("📱 Выберите количество устройств для подключения:", reply_markup=kb.as_markup())
+    await callback.answer()
+
+
+# ШАГ 3: ДИНАМИЧЕСКИЙ РАСЧЕТ И ОПЛАТА
 @dp.callback_query(F.data.startswith("pay_"))
 async def pay(callback: types.CallbackQuery):
-    amount = callback.data.split("_")[1]
+    _, days, devices = callback.data.split("_")
+    devices = int(devices)
+    
+    # Расчет цены: 1 устр = 100%, 2 устр = 150%, 3 устр = 200% от базовой цены
+    base_price = BASE_PRICES[days]
+    if devices == 1:
+        total_amount = base_price
+    elif devices == 2:
+        total_amount = int(base_price * 1.5)
+    else:
+        total_amount = base_price * 2
+
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{amount}"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
+    kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{total_amount}"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад к устройствам", callback_data=f"device_{days}"))
 
     await callback.message.edit_text(
-        f"💳 Оплата VPN\n\nСумма: {amount}₽\n\n💳 Карта для оплаты:\n{UMONEY_CARD}\n\nПосле оплаты нажмите кнопку «Я оплатил».",
+        f"💳 *Оплата VPN*\n\n"
+        f"📅 Срок: {days} дней\n"
+        f"📱 Устройств: {devices}\n"
+        f"💰 Итоговая сумма: *{total_amount}₽*\n\n"
+        f"💳 Карта для оплаты:\n`{UMONEY_CARD}`\n\n"
+        f"После оплаты нажмите кнопку «Я оплатил».",
+        parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
     await callback.answer()
 
 
+# ШАГ 4: ПРОВЕРКА И ПЕРЕДАЧА АДМИНУ
 @dp.callback_query(F.data.startswith("check_"))
 async def check(callback: types.CallbackQuery):
     amount = callback.data.split("_")[1]
@@ -213,13 +199,14 @@ async def check(callback: types.CallbackQuery):
         f"💸 *Новая заявка на VPN*\n\n"
         f"👤 Пользователь: {user.full_name}\n"
         f"🆔 ID: `{user.id}`\n"
-        f"💳 Сумма: {amount}₽",
+        f"💳 Сумма к проверке: {amount}₽",
         parse_mode="Markdown",
         reply_markup=admin_kb.as_markup()
     )
     await callback.answer()
 
 
+# ОДОБРЕНИЕ АДМИНИСТРАТОРОМ
 @dp.callback_query(F.data.startswith("accept_"))
 async def admin_accept(callback: types.CallbackQuery):
     user_id = int(callback.data.split("_")[1])
@@ -234,7 +221,7 @@ async def admin_accept(callback: types.CallbackQuery):
             "1️⃣ Откройте HappVPN\n"
             "2️⃣ Нажмите «Импорт подписки»\n"
             "3️⃣ Вставьте ключ\n"
-            "4️⃣ Подключитесь к серверу\n\n"
+            "4️⃣ Подключитесь\n\n"
             "🚀 VPN успешно активирован.",
             parse_mode="Markdown",
             disable_web_page_preview=True
@@ -244,13 +231,13 @@ async def admin_accept(callback: types.CallbackQuery):
             f"{callback.message.text}\n\n🟢 *Статус: Одобрено*",
             parse_mode="Markdown"
         )
-
     except Exception as e:
         await callback.message.reply(f"❌ Ошибка отправки пользователю: {e}")
 
     await callback.answer()
 
 
+# ОТКЛОНЕНИЕ АДМИНИСТРАТОРОМ
 @dp.callback_query(F.data.startswith("decline_"))
 async def admin_decline(callback: types.CallbackQuery):
     user_id = int(callback.data.split("_")[1])
@@ -267,10 +254,22 @@ async def admin_decline(callback: types.CallbackQuery):
             f"{callback.message.text}\n\n🔴 *Статус: Отклонено*",
             parse_mode="Markdown"
         )
-
     except Exception as e:
         await callback.message.reply(f"❌ Ошибка отправки пользователю: {e}")
 
+    await callback.answer()
+
+
+# КНОПКА ОБЩЕГО НАЗАД (ВОЗВРАТ В ГЛАВНОЕ МЕНЮ)
+@dp.callback_query(F.data == "back")
+async def back(callback: types.CallbackQuery):
+    text = (
+        "🏠 **Главное меню**\n\n"
+        "👋 Добро пожаловать в AuraVPN\n"
+        "🌐 Быстрый VPN без ограничений\n\n"
+        "Выберите действие ниже:"
+    )
+    await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=main_kb())
     await callback.answer()
 
 
