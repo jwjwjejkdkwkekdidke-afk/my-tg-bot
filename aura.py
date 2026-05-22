@@ -5,7 +5,6 @@ import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from aiogram.types import FSInputFile
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,13 +18,30 @@ dp = Dispatcher()
 # Временная база данных для рефералов
 referrals_db = {}
 
+# Прямая ссылка на картинку-баннер личного кабинета
+# Ты можешь загрузить свою картинку в любой открытый фотохостинг или телеграм-канал и вставить сюда ссылку
+BANNER_URL = "https://raw.githubusercontent.com/aiogram/aiogram/dev/assets/logo.png"
 
-def main_kb():
-    """Главное меню бота"""
+
+def get_profile_text(user_id: int, user_name: str) -> str:
+    """Функция генерации красивого текста профиля в одном стиле"""
+    ref_count = len(referrals_db.get(user_id, set()))
+    return (
+        f"👤 **Профиль {user_name}:** 💯\n\n"
+        f"➖ **ID:** `{user_id}`\n"
+        f"➖ **Баланс:** 0 ₽ RUB\n"
+        f"➖ **К-во подписок:** 0\n"
+        f"➖ **Приглашено друзей:** {ref_count}"
+    )
+
+
+def profile_kb():
+    """Вертикальное меню кнопок личного кабинета"""
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="💳 Купить VPN", callback_data="buy"))
-    kb.row(types.InlineKeyboardButton(text="⚡️ Подключиться", callback_data="connect"))
-    kb.row(types.InlineKeyboardButton(text="👤 Профиль", callback_data="profile"))
+    kb.row(types.InlineKeyboardButton(text="➕ Купить новую подписку", callback_data="buy"))
+    kb.row(types.InlineKeyboardButton(text="🎁 Подарить другу", callback_data="gift_friend"))
+    kb.row(types.InlineKeyboardButton(text="💰 Заработать с AuraVPN", callback_data="earn"))
+    kb.row(types.InlineKeyboardButton(text="💬 О сервисе", callback_data="about"))
     return kb.as_markup()
 
 
@@ -55,59 +71,36 @@ async def start(message: types.Message):
         except ValueError:
             pass
 
-    text = (
-        "👋 Добро пожаловать в AuraVPN\n\n"
-        "🌐 Быстрый VPN без ограничений\n"
-        "📍 Стабильные сервера\n\n"
-        "Выберите действие ниже:"
+    # Теперь сразу после /start бот присылает ЛИЧНЫЙ КАБИНЕТ с баннером
+    await message.answer_photo(
+        photo=BANNER_URL,
+        caption=get_profile_text(user_id, message.from_user.first_name),
+        parse_mode="Markdown",
+        reply_markup=profile_kb()
     )
-    await message.answer(text, reply_markup=main_kb())
 
 
-# Новый профиль с баннером и кнопками (как на скриншоте 2)
 @dp.callback_query(F.data == "profile")
 async def profile(callback: types.CallbackQuery):
+    """Возврат в меню профиля из других вкладок"""
     user = callback.from_user
-    ref_count = len(referrals_db.get(user.id, set()))
     
-    # Удаляем старое текстовое сообщение, чтобы красиво отправить баннер
-    await callback.message.delete()
-
-    profile_text = (
-        f"👤 **Профиль:** 💯\n\n"
-        f"➖ **ID:** `{user.id}`\n"
-        f"➖ **Баланс:** 0 ₽ RUB\n"
-        f"➖ **К-во подписок:** 0\n"
-        f"➖ **Приглашено друзей:** {ref_count}\n\n"
-        f"╭───────────────────────────╮\n"
-        f"│ 🔧 _Нажмите кнопку ➕ Добавить новую подписку, чтобы_ │\n"
-        f"│ _настроить VPN-подключение_                          │\n"
-        f"╰───────────────────────────╯"
-    )
-
-    kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="➕ Купить новую подписку", callback_data="buy"))
-    kb.row(types.InlineKeyboardButton(text="🎁 Подарить другу", callback_data="gift_friend"))
-    kb.row(types.InlineKeyboardButton(text="💰 Заработать с AuraVPN", callback_data="earn"))
-    kb.row(types.InlineKeyboardButton(text="💬 О сервисе", callback_data="about"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в меню", callback_data="back_to_menu"))
-
-    try:
-        photo = FSInputFile("banner.jpg")
+    # Если мы уже находимся в сообщении с фото, просто обновляем его текст и кнопки
+    if callback.message.photo:
+        await callback.message.edit_caption(
+            caption=get_profile_text(user.id, user.first_name),
+            parse_mode="Markdown",
+            reply_markup=profile_kb()
+        )
+    else:
+        # Если вдруг фото не было, удаляем старое сообщение и шлем заново профиль
+        await callback.message.delete()
         await callback.message.answer_photo(
-            photo=photo, 
-            caption=profile_text, 
-            parse_mode="Markdown", 
-            reply_markup=kb.as_markup()
+            photo=BANNER_URL,
+            caption=get_profile_text(user.id, user.first_name),
+            parse_mode="Markdown",
+            reply_markup=profile_kb()
         )
-    except Exception:
-        # Если баннер забыли положить в папку с ботом
-        await callback.message.answer(
-            f"🖼️ (Добавьте файл banner.jpg в папку)\n\n{profile_text}", 
-            parse_mode="Markdown", 
-            reply_markup=kb.as_markup()
-        )
-    
     await callback.answer()
 
 
@@ -132,11 +125,7 @@ async def earn(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
 
-    if callback.message.photo:
-        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
-    else:
-        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=kb.as_markup())
-    
+    await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 
@@ -157,11 +146,7 @@ async def about(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
 
-    if callback.message.photo:
-        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
-    else:
-        await callback.message.edit_text(text, parse_mode="Markdown", reply_markup=kb.as_markup())
-    
+    await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 
@@ -171,33 +156,9 @@ async def gift_friend(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
     
-    if callback.message.photo:
-        await callback.message.edit_caption(caption="🎁 Функция отправки подарка другу находится в разработке.", reply_markup=kb.as_markup())
-    else:
-        await callback.message.edit_text("🎁 Функция отправки подарка другу находится в разработке.", reply_markup=kb.as_markup())
-    await callback.answer()
-
-
-# Кнопка возврата из профиля (с картинкой) обратно в главное меню
-@dp.callback_query(F.data == "back_to_menu")
-async def back_to_menu(callback: types.CallbackQuery):
-    await callback.message.delete()
-    text = (
-        "👋 Добро пожаловать в AuraVPN\n\n"
-        "🌐 Быстрый VPN без ограничений\n"
-        "📍 Стабильные сервера\n\n"
-        "Выберите действие ниже:"
-    )
-    await callback.message.answer(text, reply_markup=main_kb())
-    await callback.answer()
-
-
-# Кнопка «Назад» для обычных текстовых окон оплаты
-@dp.callback_query(F.data == "back")
-async def back(callback: types.CallbackQuery):
-    await callback.message.edit_text(
-        "👋 Добро пожаловать в AuraVPN\n\nВыберите действие ниже:", 
-        reply_markup=main_kb()
+    await callback.message.edit_caption(
+        caption="🎁 Функция отправки подарка другу находится в разработке.", 
+        reply_markup=kb.as_markup()
     )
     await callback.answer()
 
@@ -210,14 +171,11 @@ async def buy(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="pay_99"))
     kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="pay_279"))
     kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_549"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад в профиль", callback_data="profile"))
 
-    # Если перешли из профиля, где была картинка — удаляем её, чтобы открыть текстовое меню
-    if callback.message.photo:
-        await callback.message.delete()
-        await callback.message.answer("💳 Выберите тариф VPN:", reply_markup=kb.as_markup())
-    else:
-        await callback.message.edit_text("💳 Выберите тариф VPN:", reply_markup=kb.as_markup())
+    # Так как это финансовое меню, мы удаляем медиа-карточку профиля, переходя на чистый текст оплаты
+    await callback.message.delete()
+    await callback.message.answer("💳 Выберите тариф VPN:", reply_markup=kb.as_markup())
     await callback.answer()
 
 
@@ -313,12 +271,6 @@ async def admin_decline(callback: types.CallbackQuery):
     except Exception as e:
         await callback.message.reply(f"❌ Ошибка отправки пользователю: {e}")
 
-    await callback.answer()
-
-
-@dp.callback_query(F.data == "connect")
-async def connect(callback: types.CallbackQuery):
-    await callback.message.answer("📲 Скачайте HappVPN и вставьте полученный ключ.")
     await callback.answer()
 
 
