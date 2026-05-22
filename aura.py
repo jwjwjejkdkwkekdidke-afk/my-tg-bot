@@ -15,13 +15,24 @@ async def earn(callback: types.CallbackQuery):
     user = callback.from_user
     bot_info = await bot.get_me()
     
+    # Берем данные пользователя из нашей мини-БД (кол-во рефералов и баланс)
+    user_data = get_user_data(user.id)
+    ref_count = len(user_data["referrals"])
+    ref_balance = user_data["balance"]
+    
+    # Генерируем уникальную ссылку для юзера
     ref_link = f"https://t.me/{bot_info.username}?start={user.id}"
-    ref_count = len(referrals_db.get(user.id, set()))
 
+    # Форматируем текст по твоему ТЗ
     text = (
         f"💰 *Партнерская программа AuraVPN*\n\n"
-        f"Приглашайте друзей и получайте бонусы на свой баланс!\n\n"
-        f"👤 Вы пригласили: *{ref_count}* чел.\n\n"
+        f"Приглашайте друзей и зарабатывайте 30% с каждого пополнения!\n\n"
+        f"Например:\n"
+        f"— Друзья перешли по вашей ссылке и потратили 1000₽\n"
+        f"— Вы получаете 300.0₽ и выводите на КАРТУ/USDT!\n\n"
+        f"📊 *Ваша статистика:*\n"
+        f"👥 Количество приглашённых: *{ref_count}* чел.\n"
+        f"💵 Ваш баланс: *{ref_balance}₽*\n\n"
         f"🔗 *Ваша реферальная ссылка:*\n"
         f"`{ref_link}`\n\n"
         f"_Нажмите на ссылку выше, чтобы скопировать её._"
