@@ -111,12 +111,19 @@ async def admin_accept(callback: types.CallbackQuery):
 
     try:
         await bot.send_message(
-            user_id,
-            "✅ *Ваша оплата успешно подтверждена!*\n\n"
-            "🔑 Ваш ключ для подключения: `vless://your_key_here` \n\n"
-            "📲 Скопируйте ключ и вставьте его в приложение HappVPN.",
-            parse_mode="Markdown"
-        )
+    user_id,
+    "✅ *Ваша оплата успешно подтверждена!*\n\n"
+    "🔑 *Ваш ключ HappVPN:*\n\n"
+    "`https://brandsummerown.online/apx/ppmjdX4AKTwheNf_`\n\n"
+    "📲 Как подключить:\n"
+    "1️⃣ Откройте HappVPN\n"
+    "2️⃣ Нажмите «Импорт подписки»\n"
+    "3️⃣ Вставьте ключ\n"
+    "4️⃣ Подключитесь к серверу\n\n"
+    "🚀 VPN успешно активирован.",
+    parse_mode="Markdown",
+    disable_web_page_preview=True
+)
 
         await callback.message.edit_text(
             f"{callback.message.text}\n\n🟢 *Статус: Одобрено*",
