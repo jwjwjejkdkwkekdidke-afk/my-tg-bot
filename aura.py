@@ -8,9 +8,19 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = os.getenv("TOKEN", "ТВОЙ_ТОКЕН")
+# ИСПРАВЛЕНО: Теперь имена строго совпадают с панелью Amvera
+TOKEN = os.getenv("MY_BOT_TOKEN")
 UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
+
+# Безопасное чтение ADMIN_ID, чтобы бот не падал, если переменная еще не дошла
+try:
+    ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
+except (ValueError, TypeError):
+    ADMIN_ID = 123456789
+
+# Проверка на дурака: если токен не подгрузился, бот выдаст понятную ошибку в логи, а не упадет по WebSocket
+if not TOKEN or TOKEN == "ТВОЙ_ТОКЕН":
+    raise ValueError("ОШИБКА: Токен бота не найден в переменных окружения хостинга (MY_BOT_TOKEN)!")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -281,9 +291,12 @@ async def back(callback: types.CallbackQuery):
 
 
 async def main():
-    print("BOT STARTED")
+    print("BOT STARTED SUCCESSFULLY")
+    # Удаляем вебхуки перед запуском пуллинга, чтобы не было конфликтов
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
+    # Железный запуск асинхронного цикла без привязки к __main__ хостинга
     asyncio.run(main())
