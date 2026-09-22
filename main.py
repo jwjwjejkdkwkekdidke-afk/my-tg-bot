@@ -83,7 +83,6 @@ async def start_command(message: types.Message):
         "⬇️ Выберите раздел в меню ниже:"
     )
     
-    # Здесь в будущем вместо текста можно будет использовать answer_photo с твоим зеленым file_id
     await message.answer(
         text=text,
         parse_mode="Markdown",
@@ -207,7 +206,6 @@ async def info_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    # Временно используем работающий ID первой картинки, пока не заменим на нужный
     await callback.message.answer_photo(
         photo="AgACAgIAAxkBAAIaxWqy9czlfQQccj5QkvJbptY7olLCAAiEHWsbQ5SYSYbdhFWPcGK8AQADAgADeQADPQQ",
         caption=text,
@@ -283,7 +281,7 @@ async def check_payment(callback: types.CallbackQuery):
         show_alert=True
     )
 
-# --- БЕЗОПАСНЫЙ ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ИСПРАВЛЕНО ЗАВИСАНИЕ) ---
+# --- БЕЗОПАСНЫЙ ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ИСПРАВЛЕНО) ---
 @dp.callback_query(F.data == "back")
 async def back_to_main(callback: types.CallbackQuery):
     text = (
@@ -291,11 +289,14 @@ async def back_to_main(callback: types.CallbackQuery):
         "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
         "⬇️ Выберите раздел в меню ниже:"
     )
+    
+    # Удаляем текущее сообщение (неважно, фото это или текст)
     try:
         await callback.message.delete()
     except Exception:
         pass
         
+    # Отправляем главное меню заново чистым сообщением
     await callback.message.answer(
         text=text,
         parse_mode="Markdown",
