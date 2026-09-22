@@ -8,8 +8,13 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 logging.basicConfig(level=logging.INFO)
 
-# --- НАСТРОЙКИ ---
-TOKEN = os.getenv("MY_BOT_TOKEN")
+# --- НАСТРОЙКИ (ИЩЕМ ТОКЕН ВО ВСЕХ ВОЗМОЖНЫХ ПЕРЕМЕННЫХ) ---
+TOKEN = (
+    os.getenv("MY_BOT_TOKEN") or 
+    os.getenv("TELEGRAM_BOT_TOKEN") or 
+    os.getenv("TOKEN")
+)
+
 UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
 
 try:
@@ -17,7 +22,7 @@ try:
 except (ValueError, TypeError):
     ADMIN_ID = 123456789
 
-if not TOKEN or TOKEN == "ТВОЙ_ТОКЕН":
+if not TOKEN:
     raise ValueError("ОШИБКА: Токен бота не найден в переменных окружения хостинга!")
 
 bot = Bot(token=TOKEN)
