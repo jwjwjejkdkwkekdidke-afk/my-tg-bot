@@ -8,7 +8,6 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 logging.basicConfig(level=logging.INFO)
 
-# Токен и настройки
 TOKEN = os.getenv("MY_BOT_TOKEN")
 UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
 
@@ -23,7 +22,7 @@ if not TOKEN or TOKEN == "ТВОЙ_ТОКЕН":
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# База данных (в памяти, для примера)
+# Временная база данных
 referrals_db = {}
 
 def get_user_data(user_id: int):
@@ -31,7 +30,7 @@ def get_user_data(user_id: int):
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
 
-# Прямые ссылки на картинки (баннеры)
+# Картинки для разделов
 IMG_WELCOME = "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800"
 IMG_MANAGEMENT = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800"
 IMG_REFERRAL = "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800"
@@ -41,17 +40,11 @@ IMG_REFERRAL = "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800"
 def main_kb():
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="🛡 Управление VPN", callback_data="management"))
-    kb.row(types.InlineKeyboardButton(text="🎁 Подарить VPN", callback_data="buy")) # Можно переименовать или оставить
     kb.row(
         types.InlineKeyboardButton(text="👥 Реферальная программа", callback_data="referral"),
         types.InlineKeyboardButton(text="💬 Поддержка", callback_data="support")
     )
     kb.row(types.InlineKeyboardButton(text="ℹ️ Информация", callback_data="info"))
-    return kb.as_markup()
-
-def back_kb(callback_name="back"):
-    kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=callback_name))
     return kb.as_markup()
 
 
@@ -63,7 +56,6 @@ async def start(message: types.Message):
     user_id = message.from_user.id
     get_user_data(user_id)
     
-    # Обработка рефералки
     if len(args) > 1:
         try:
             referrer_id = int(args[1])
@@ -121,7 +113,7 @@ async def management_menu(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "devices")
 async def devices_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="➕ Подключить новое устройство", callback_data="buy"))
+    kb.row(types.InlineKeyboardButton(text="➕ Продлить / Купить", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
     await callback.message.edit_caption(
@@ -167,7 +159,7 @@ async def withdraw_funds(callback: types.CallbackQuery):
     await callback.answer("⚠️ Минимальная сумма для вывода: 150 ₽", show_alert=True)
 
 
-# --- 3. ПОДДЕРЖКА (ТИКЕТЫ) ---
+# --- 3. ПОДДЕРЖКА ---
 
 @dp.callback_query(F.data == "support")
 async def support_menu(callback: types.CallbackQuery):
@@ -193,7 +185,7 @@ async def support_menu(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# --- 4. ИНФОРМАЦИЯ (ПОЛЬЗОВАТЕЛЬСКОЕ СОГЛАШЕНИЕ) ---
+# --- 4. ИНФОРМАЦИЯ ---
 
 @dp.callback_query(F.data == "info")
 async def info_menu(callback: types.CallbackQuery):
@@ -219,43 +211,32 @@ async def info_menu(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# --- ПОКУПКА / ТАРИФЫ (ИЗ ПРОШЛОЙ ВЕРСИИ) ---
+# --- ТАРИФЫ И ОПЛАТА ---
 
 @dp.callback_query(F.data == "buy")
 async def buy(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="device_7"))
-    kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="device_30"))
-    kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="device_90"))
-    kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="device_180"))
+    kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="pay_7"))
+    kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="pay_30"))
+    kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="pay_90"))
+    kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_180"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
     await callback.message.edit_caption(caption="💳 Выберите срок действия VPN:", reply_markup=kb.as_markup())
     await callback.answer()
 
-@dp.callback_query(F.data.startswith("device_"))
-async def choose_devices(callback: types.CallbackQuery):
-    days = callback.data.split("_")[1]
-    kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="📱 1 устройство (Базовая цена)", callback_data=f"pay_{days}_1"))
-    kb.row(types.InlineKeyboardButton(text="📱📱 2 устройства (+50%)", callback_data=f"pay_{days}_2"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
-
-    await callback.message.edit_caption(caption="📱 Выберите количество устройств:", reply_markup=kb.as_markup())
-    await callback.answer()
-
 @dp.callback_query(F.data.startswith("pay_"))
 async def pay(callback: types.CallbackQuery):
-    _, days, devices = callback.data.split("_")
+    days = callback.data.split("_")[1]
     base_prices = {"7": 39, "30": 99, "90": 279, "180": 549}
-    total_amount = base_prices[days] * int(devices)
+    total_amount = base_prices[days]
 
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{total_amount}"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data=f"device_{days}"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
 
     await callback.message.edit_caption(
-        caption=f"💳 **Оплата VPN**\n\nСрок: {days} дн. | Устройств: {devices}\nСумма к оплате: *{total_amount}₽*\n\nКарта: `{UMONEY_CARD}`",
+        caption=f"💳 **Оплата VPN**\n\nСрок: {days} дн.\nСумма к оплате: *{total_amount}₽*\n\nКарта для перевода:\n`{UMONEY_CARD}`",
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
@@ -277,8 +258,6 @@ async def back(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-
-# --- ЗАПУСК ---
 
 async def main():
     print("BOT STARTED SUCCESSFULLY")
