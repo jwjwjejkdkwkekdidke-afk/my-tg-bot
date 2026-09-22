@@ -17,10 +17,8 @@ TOKEN = (
 
 UMONEY_CARD = os.getenv("UMONEY_CARD", "2204128123651537")
 
-try:
-    ADMIN_ID = int(os.getenv("ADMIN_ID", "8052913358"))
-except (ValueError, TypeError):
-    ADMIN_ID = 8052913358
+# Устанавливаем твой реальный ID администратора
+ADMIN_ID = 8052913358
 
 if not TOKEN:
     raise ValueError("ОШИБКА: Токен бота не найден в переменных окружения хостинга!")
@@ -36,12 +34,6 @@ def get_user_data(user_id: int):
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
 
-# --- ВРЕМЕННЫЙ ОБРАБОТЧИК ДЛЯ ПОЛУЧЕНИЯ FILE_ID НОВОЙ КАРТИНКИ ---
-@dp.message(F.photo)
-async def get_photo_id(message: types.Message):
-    photo_id = message.photo[-1].file_id
-    await message.answer(f"Вот file_id этой картинки:\n\n{photo_id}")
-
 # --- КЛАВИАТУРЫ ---
 def main_kb():
     kb = InlineKeyboardBuilder()
@@ -53,7 +45,7 @@ def main_kb():
     kb.row(types.InlineKeyboardButton(text="ℹ️ Информация", callback_data="info"))
     return kb.as_markup()
 
-# --- ОБРАБОТЧИК /START ---
+# --- ОБРАБОТЧИК /START (С НОВОЙ ЗЕЛЕНОЙ КАРТИНКОЙ) ---
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
     args = message.text.split()
@@ -83,8 +75,16 @@ async def start_command(message: types.Message):
         "⬇️ Выберите раздел в меню ниже:"
     )
     
-    await message.answer(
-        text=text,
+    # Если бот запускался через команду, а не кнопку назад, удаляем старое текстовое сообщение, если оно было
+    try:
+        await message.delete()
+    except Exception:
+        pass
+
+    # Отправляем главное меню с новой зеленой картинкой
+    await message.answer_photo(
+        photo="AgACAgIAAxkBAAIa3Wqy9yZmxQyZqEi_2g1KS6wy2aXKAAI9IGsbtCyZSU9cjfdiAAH0WwEAAwIAA3kAAz0E",
+        caption=text,
         parse_mode="Markdown",
         reply_markup=main_kb()
     )
@@ -281,7 +281,7 @@ async def check_payment(callback: types.CallbackQuery):
         show_alert=True
     )
 
-# --- БЕЗОПАСНЫЙ ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ИСПРАВЛЕНО) ---
+# --- БЕЗОПАСНЫЙ ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (С ЗЕЛЕНОЙ КАРТИНКОЙ) ---
 @dp.callback_query(F.data == "back")
 async def back_to_main(callback: types.CallbackQuery):
     text = (
@@ -290,15 +290,16 @@ async def back_to_main(callback: types.CallbackQuery):
         "⬇️ Выберите раздел в меню ниже:"
     )
     
-    # Удаляем текущее сообщение (неважно, фото это или текст)
+    # Удаляем текущее сообщение
     try:
         await callback.message.delete()
     except Exception:
         pass
         
-    # Отправляем главное меню заново чистым сообщением
-    await callback.message.answer(
-        text=text,
+    # Отправляем главное меню заново с зеленой картинкой
+    await callback.message.answer_photo(
+        photo="AgACAgIAAxkBAAIa3Wqy9yZmxQyZqEi_2g1KS6wy2aXKAAI9IGsbtCyZSU9cjfdiAAH0WwEAAwIAA3kAAz0E",
+        caption=text,
         parse_mode="Markdown",
         reply_markup=main_kb()
     )
