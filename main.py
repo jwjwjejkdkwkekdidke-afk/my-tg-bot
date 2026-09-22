@@ -8,7 +8,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 logging.basicConfig(level=logging.INFO)
 
-# --- НАСТРОЙКИ (ИЩЕМ ТОКЕН ВО ВСЕХ ВОЗМОЖНЫХ ПЕРЕМЕННЫХ) ---
+# --- НАСТРОЙКИ ---
 TOKEN = (
     os.getenv("MY_BOT_TOKEN") or 
     os.getenv("TELEGRAM_BOT_TOKEN") or 
@@ -35,6 +35,12 @@ def get_user_data(user_id: int):
     if user_id not in referrals_db:
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
+
+# --- УЗНАТЬ ID КАРТИНКИ (ВРЕМЕННО) ---
+@dp.message(F.photo)
+async def get_photo_id(message: types.Message):
+    photo_id = message.photo[-1].file_id
+    await message.answer(f"Вот file_id этой картинки:\n\n`{photo_id}`", parse_mode="Markdown")
 
 # --- КЛАВИАТУРЫ ---
 def main_kb():
