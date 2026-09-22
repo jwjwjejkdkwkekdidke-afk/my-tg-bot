@@ -17,7 +17,7 @@ TOKEN = (
 
 UMONEY_CARD = os.getenv("UMONEY_CARD", "2204128123651537")
 
-# Устанавливаем твой реальный ID администратора
+# Твой ID администратора
 ADMIN_ID = 8052913358
 
 if not TOKEN:
@@ -45,7 +45,7 @@ def main_kb():
     kb.row(types.InlineKeyboardButton(text="ℹ️ Информация", callback_data="info"))
     return kb.as_markup()
 
-# --- ОБРАБОТЧИК /START (С НОВОЙ ЗЕЛЕНОЙ КАРТИНКОЙ) ---
+# --- ОБРАБОТЧИК /START ---
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
     args = message.text.split()
@@ -75,16 +75,8 @@ async def start_command(message: types.Message):
         "⬇️ Выберите раздел в меню ниже:"
     )
     
-    # Если бот запускался через команду, а не кнопку назад, удаляем старое текстовое сообщение, если оно было
-    try:
-        await message.delete()
-    except Exception:
-        pass
-
-    # Отправляем главное меню с новой зеленой картинкой
-    await message.answer_photo(
-        photo="AgACAgIAAxkBAAIa3Wqy9yZmxQyZqEi_2g1KS6wy2aXKAAI9IGsbtCyZSU9cjfdiAAH0WwEAAwIAA3kAAz0E",
-        caption=text,
+    await message.answer(
+        text=text,
         parse_mode="Markdown",
         reply_markup=main_kb()
     )
@@ -104,16 +96,11 @@ async def management_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 Продлить подписку", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.answer_photo(
-        photo="AgACAgIAAxkBAAIaxWqy9czlfQQccj5QkvJbptY7olLCAAiEHWsbQ5SYSYbdhFWPcGK8AQADAgADeQADPQQ",
-        caption=text,
+    await callback.message.edit_text(
+        text=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
-    try:
-        await callback.message.delete()
-    except Exception:
-        pass
     await callback.answer()
 
 @dp.callback_query(F.data == "devices")
@@ -152,16 +139,11 @@ async def referral_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="💸 Вывести средства", callback_data="withdraw"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.answer_photo(
-        photo="AgACAgIAAxkBAAIa22qy9xW_fOOxvCLkyknK9Gi99YXWAAI7IGsbtCyZSSQDahaeIZjNAQADAgADeQADPQQ",
-        caption=text,
+    await callback.message.edit_text(
+        text=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
-    try:
-        await callback.message.delete()
-    except Exception:
-        pass
     await callback.answer()
 
 @dp.callback_query(F.data == "withdraw")
@@ -206,16 +188,11 @@ async def info_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.answer_photo(
-        photo="AgACAgIAAxkBAAIaxWqy9czlfQQccj5QkvJbptY7olLCAAiEHWsbQ5SYSYbdhFWPcGK8AQADAgADeQADPQQ",
-        caption=text,
+    await callback.message.edit_text(
+        text=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
-    try:
-        await callback.message.delete()
-    except Exception:
-        pass
     await callback.answer()
 
 # --- ПОКУПКА / ТАРИФЫ ---
@@ -281,7 +258,7 @@ async def check_payment(callback: types.CallbackQuery):
         show_alert=True
     )
 
-# --- БЕЗОПАСНЫЙ ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (С ЗЕЛЕНОЙ КАРТИНКОЙ) ---
+# --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ ---
 @dp.callback_query(F.data == "back")
 async def back_to_main(callback: types.CallbackQuery):
     text = (
@@ -290,16 +267,8 @@ async def back_to_main(callback: types.CallbackQuery):
         "⬇️ Выберите раздел в меню ниже:"
     )
     
-    # Удаляем текущее сообщение
-    try:
-        await callback.message.delete()
-    except Exception:
-        pass
-        
-    # Отправляем главное меню заново с зеленой картинкой
-    await callback.message.answer_photo(
-        photo="AgACAgIAAxkBAAIa3Wqy9yZmxQyZqEi_2g1KS6wy2aXKAAI9IGsbtCyZSU9cjfdiAAH0WwEAAwIAA3kAAz0E",
-        caption=text,
+    await callback.message.edit_text(
+        text=text,
         parse_mode="Markdown",
         reply_markup=main_kb()
     )
