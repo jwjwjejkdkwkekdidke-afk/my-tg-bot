@@ -8,21 +8,22 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 logging.basicConfig(level=logging.INFO)
 
+# --- НАСТРОЙКИ ---
 TOKEN = os.getenv("MY_BOT_TOKEN")
-UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
+UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000") # Задай свою в Bothost
 
 try:
-    ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
+    ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789")) # Задай свой в Bothost
 except (ValueError, TypeError):
     ADMIN_ID = 123456789
 
 if not TOKEN or TOKEN == "ТВОЙ_ТОКЕН":
-    raise ValueError("ОШИБКА: Токен бота не найден в переменных окружения хостинга (MY_BOT_TOKEN)!")
+    raise ValueError("ОШИБКА: Токен бота не найден в переменных окружения хостинга!")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
-# Временная база данных
+# --- ВРЕМЕННАЯ БАЗА ДАННЫХ (ДЛЯ ПРИМЕРА) ---
 referrals_db = {}
 
 def get_user_data(user_id: int):
@@ -30,20 +31,25 @@ def get_user_data(user_id: int):
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
 
-# Картинки для разделов
-IMG_WELCOME = "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800"
-IMG_MANAGEMENT = "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=800"
-IMG_REFERRAL = "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800"
+# --- ССЫЛКИ НА ВАШИ КАРТИНКИ (БАННЕРЫ) ---
+# Чтобы картинки грузились мгновенно, лучше загрузить их в бота (через BotFather -> /newpack)
+# и вставить сюда File_ID. Сейчас используются прямые ссылки на изображения выше.
+IMG_WELCOME = "https://r.imgholder.ru/a/1219827/400x"  # Добро пожаловать (image_9.png)
+IMG_MANAGEMENT = "https://r.imgholder.ru/a/1219834/400x" # Управление VPN (image_10.png)
+IMG_REFERRAL = "https://r.imgholder.ru/a/1219836/400x" # Приглашайте друзей (image_11.png)
 
 # --- КЛАВИАТУРЫ ---
 
 def main_kb():
     kb = InlineKeyboardBuilder()
+    # 1. Управление VPN
     kb.row(types.InlineKeyboardButton(text="🛡 Управление VPN", callback_data="management"))
+    # 2. Реферальная программа и Поддержка (в одну строку)
     kb.row(
         types.InlineKeyboardButton(text="👥 Реферальная программа", callback_data="referral"),
         types.InlineKeyboardButton(text="💬 Поддержка", callback_data="support")
     )
+    # 3. Информация
     kb.row(types.InlineKeyboardButton(text="ℹ️ Информация", callback_data="info"))
     return kb.as_markup()
 
@@ -51,11 +57,12 @@ def main_kb():
 # --- ОБРАБОТЧИК /START ---
 
 @dp.message(Command("start"))
-async def start(message: types.Message):
+async def start_command(message: types.Message):
     args = message.text.split()
     user_id = message.from_user.id
     get_user_data(user_id)
     
+    # Обработка реферальной ссылки
     if len(args) > 1:
         try:
             referrer_id = int(args[1])
@@ -113,7 +120,7 @@ async def management_menu(callback: types.CallbackQuery):
 @dp.callback_query(F.data == "devices")
 async def devices_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="➕ Продлить / Купить", callback_data="buy"))
+    kb.row(types.InlineKeyboardButton(text="➕ Подключить новое устройство", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
     await callback.message.edit_caption(
@@ -211,10 +218,10 @@ async def info_menu(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# --- ТАРИФЫ И ОПЛАТА ---
+# --- ПОКУПКА / ТАРИФЫ (БЕЗ ПОДАРКОВ) ---
 
 @dp.callback_query(F.data == "buy")
-async def buy(callback: types.CallbackQuery):
+async def buy_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="pay_7"))
     kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="pay_30"))
@@ -222,31 +229,36 @@ async def buy(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_180"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
-    await callback.message.edit_caption(caption="💳 Выберите срок действия VPN:", reply_markup=kb.as_markup())
+    await callback.message.edit_caption(caption="💳 Выберите срок подписки:", reply_markup=kb.as_markup())
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("pay_"))
-async def pay(callback: types.CallbackQuery):
+async def payment_process(callback: types.CallbackQuery):
     days = callback.data.split("_")[1]
-    base_prices = {"7": 39, "30": 99, "90": 279, "180": 549}
-    total_amount = base_prices[days]
+    prices = {"7": "39", "30": "99", "90": "279", "180": "549"}
+    amount = prices[days]
 
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{total_amount}"))
+    kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{amount}"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
 
     await callback.message.edit_caption(
-        caption=f"💳 **Оплата VPN**\n\nСрок: {days} дн.\nСумма к оплате: *{total_amount}₽*\n\nКарта для перевода:\n`{UMONEY_CARD}`",
+        caption=f"💳 **Оплата VPN**\n\nСрок: {days} дней\nСумма к оплате: *{amount}₽*\n\nКарта для перевода:\n`{UMONEY_CARD}`\n\nПосле оплаты нажмите кнопку ниже.",
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
     await callback.answer()
 
+# Обработка нажатия "Я оплатил" (заглушка)
+@dp.callback_query(F.data.startswith("check_"))
+async def check_payment(callback: types.CallbackQuery):
+    await callback.answer("⚠️ Заявка создана. Ожидайте подтверждения.", show_alert=True)
+
 
 # --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ ---
 
 @dp.callback_query(F.data == "back")
-async def back(callback: types.CallbackQuery):
+async def back_to_main(callback: types.CallbackQuery):
     caption = (
         "✨ **Добро пожаловать в AuraVPN**\n\n"
         "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
@@ -259,8 +271,11 @@ async def back(callback: types.CallbackQuery):
     await callback.answer()
 
 
+# --- ЗАПУСК ---
+
 async def main():
     print("BOT STARTED SUCCESSFULLY")
+    # Очищаем вебхук перед запуском, чтобы бот работал через polling
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
