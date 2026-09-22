@@ -36,6 +36,12 @@ def get_user_data(user_id: int):
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
 
+# --- ВРЕМЕННЫЙ ОБРАБОТЧИК ДЛЯ ПОЛУЧЕНИЯ FILE_ID НОВОЙ КАРТИНКИ ---
+@dp.message(F.photo)
+async def get_photo_id(message: types.Message):
+    photo_id = message.photo[-1].file_id
+    await message.answer(f"Вот file_id этой картинки:\n\n{photo_id}")
+
 # --- КЛАВИАТУРЫ ---
 def main_kb():
     kb = InlineKeyboardBuilder()
@@ -77,6 +83,7 @@ async def start_command(message: types.Message):
         "⬇️ Выберите раздел в меню ниже:"
     )
     
+    # Здесь в будущем вместо текста можно будет использовать answer_photo с твоим зеленым file_id
     await message.answer(
         text=text,
         parse_mode="Markdown",
@@ -98,9 +105,8 @@ async def management_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 Продлить подписку", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    # Отправляем фото с первым file_id
     await callback.message.answer_photo(
-        photo="AgACAgIAAxkBAAIaxWqy9czlfQQccj5QkvJbptY7olLCAAIeHWsbQ5SYSYbdhFWPcGK8AQADAgADeQADPQQ",
+        photo="AgACAgIAAxkBAAIaxWqy9czlfQQccj5QkvJbptY7olLCAAiEHWsbQ5SYSYbdhFWPcGK8AQADAgADeQADPQQ",
         caption=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
@@ -147,7 +153,6 @@ async def referral_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="💸 Вывести средства", callback_data="withdraw"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    # Отправляем фото со вторым file_id
     await callback.message.answer_photo(
         photo="AgACAgIAAxkBAAIa22qy9xW_fOOxvCLkyknK9Gi99YXWAAI7IGsbtCyZSSQDahaeIZjNAQADAgADeQADPQQ",
         caption=text,
@@ -202,9 +207,9 @@ async def info_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    # Отправляем фото с третьим file_id
+    # Временно используем работающий ID первой картинки, пока не заменим на нужный
     await callback.message.answer_photo(
-        photo="AgACAgIAAxkBAAIa3Wqy9yZmxQyZqEi_2g1KS6wy2aXKAAI9IGsbtCyZSU9cjfdiAAH0WwEAAwIAA3kAAz0E",
+        photo="AgACAgIAAxkBAAIaxWqy9czlfQQccj5QkvJbptY7olLCAAiEHWsbQ5SYSYbdhFWPcGK8AQADAgADeQADPQQ",
         caption=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
@@ -278,7 +283,7 @@ async def check_payment(callback: types.CallbackQuery):
         show_alert=True
     )
 
-# --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ ---
+# --- БЕЗОПАСНЫЙ ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ИСПРАВЛЕНО ЗАВИСАНИЕ) ---
 @dp.callback_query(F.data == "back")
 async def back_to_main(callback: types.CallbackQuery):
     text = (
@@ -286,7 +291,12 @@ async def back_to_main(callback: types.CallbackQuery):
         "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
         "⬇️ Выберите раздел в меню ниже:"
     )
-    await callback.message.edit_text(
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+        
+    await callback.message.answer(
         text=text,
         parse_mode="Markdown",
         reply_markup=main_kb()
