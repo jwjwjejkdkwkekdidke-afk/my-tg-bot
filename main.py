@@ -15,12 +15,12 @@ TOKEN = (
     os.getenv("TOKEN")
 )
 
-UMONEY_CARD = os.getenv("UMONEY_CARD", "0000 0000 0000 0000")
+UMONEY_CARD = os.getenv("UMONEY_CARD", "2204128123651537")
 
 try:
-    ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
+    ADMIN_ID = int(os.getenv("ADMIN_ID", "8052913358"))
 except (ValueError, TypeError):
-    ADMIN_ID = 123456789
+    ADMIN_ID = 8052913358
 
 if not TOKEN:
     raise ValueError("ОШИБКА: Токен бота не найден в переменных окружения хостинга!")
@@ -35,11 +35,6 @@ def get_user_data(user_id: int):
     if user_id not in referrals_db:
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
-
-# --- КАРТИНКИ (БАННЕРЫ) ---
-IMG_WELCOME = "https://r.imgholder.ru/a/1219827/400x"
-IMG_MANAGEMENT = "https://r.imgholder.ru/a/1219834/400x"
-IMG_REFERRAL = "https://r.imgholder.ru/a/1219836/400x"
 
 # --- КЛАВИАТУРЫ ---
 def main_kb():
@@ -76,15 +71,14 @@ async def start_command(message: types.Message):
         except ValueError:
             pass
 
-    caption = (
+    text = (
         "✨ **Добро пожаловать в AuraVPN**\n\n"
         "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
         "⬇️ Выберите раздел в меню ниже:"
     )
     
-    await message.answer_photo(
-        photo=IMG_WELCOME,
-        caption=caption,
+    await message.answer(
+        text=text,
         parse_mode="Markdown",
         reply_markup=main_kb()
     )
@@ -92,7 +86,7 @@ async def start_command(message: types.Message):
 # --- 1. УПРАВЛЕНИЕ VPN ---
 @dp.callback_query(F.data == "management")
 async def management_menu(callback: types.CallbackQuery):
-    caption = (
+    text = (
         "🛡 **Управление VPN**\n\n"
         "Здесь вы можете проверить статус вашей подписки, посмотреть активные устройства или продлить доступ.\n\n"
         "📅 **Статус:** Не активна\n"
@@ -104,8 +98,9 @@ async def management_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 Продлить подписку", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_media(
-        media=types.InputMediaPhoto(media=IMG_MANAGEMENT, caption=caption, parse_mode="Markdown"),
+    await callback.message.edit_text(
+        text=text,
+        parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
     await callback.answer()
@@ -116,8 +111,8 @@ async def devices_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="➕ Подключить новое устройство", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
-    await callback.message.edit_caption(
-        caption="📱 **Ваши устройства**\n\nУ вас пока нет активных подключений.",
+    await callback.message.edit_text(
+        text="📱 **Ваши устройства**\n\nУ вас пока нет активных подключений.",
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
@@ -134,7 +129,7 @@ async def referral_menu(callback: types.CallbackQuery):
     ref_balance = user_data["balance"]
     ref_link = f"https://t.me/{bot_info.username}?start={user.id}"
 
-    caption = (
+    text = (
         "👥 **Реферальная программа**\n\n"
         f"🔗 **Ваша ссылка:**\n`{ref_link}`\n\n"
         f"👥 Приглашено: *{ref_count}* чел.\n"
@@ -146,8 +141,9 @@ async def referral_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="💸 Вывести средства", callback_data="withdraw"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_media(
-        media=types.InputMediaPhoto(media=IMG_REFERRAL, caption=caption, parse_mode="Markdown"),
+    await callback.message.edit_text(
+        text=text,
+        parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
     await callback.answer()
@@ -173,8 +169,8 @@ async def support_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_caption(
-        caption=text,
+    await callback.message.edit_text(
+        text=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
@@ -194,8 +190,8 @@ async def info_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_caption(
-        caption=text,
+    await callback.message.edit_text(
+        text=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
@@ -211,8 +207,8 @@ async def buy_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_180"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
-    await callback.message.edit_caption(
-        caption="💳 **Выберите срок подписки:**", 
+    await callback.message.edit_text(
+        text="💳 **Выберите срок подписки:**", 
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
@@ -236,8 +232,8 @@ async def payment_process(callback: types.CallbackQuery):
         f"После оплаты нажмите кнопку ниже."
     )
 
-    await callback.message.edit_caption(
-        caption=text,
+    await callback.message.edit_text(
+        text=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
@@ -247,7 +243,7 @@ async def payment_process(callback: types.CallbackQuery):
 async def check_payment(callback: types.CallbackQuery):
     amount = callback.data.split("_")[1]
     
-    if ADMIN_ID and ADMIN_ID != 123456789:
+    if ADMIN_ID:
         try:
             await bot.send_message(
                 ADMIN_ID,
@@ -267,13 +263,14 @@ async def check_payment(callback: types.CallbackQuery):
 # --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ ---
 @dp.callback_query(F.data == "back")
 async def back_to_main(callback: types.CallbackQuery):
-    caption = (
+    text = (
         "✨ **Добро пожаловать в AuraVPN**\n\n"
         "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
         "⬇️ Выберите раздел в меню ниже:"
     )
-    await callback.message.edit_media(
-        media=types.InputMediaPhoto(media=IMG_WELCOME, caption=caption, parse_mode="Markdown"),
+    await callback.message.edit_text(
+        text=text,
+        parse_mode="Markdown",
         reply_markup=main_kb()
     )
     await callback.answer()
