@@ -40,7 +40,6 @@ def get_user_data(user_id: int):
 @dp.message(F.photo)
 async def get_photo_id(message: types.Message):
     photo_id = message.photo[-1].file_id
-    # Отправляем без Markdown, чтобы спецсимволы в ID не ломали отправку
     await message.answer(f"Вот file_id этой картинки:\n\n{photo_id}")
 
 # --- КЛАВИАТУРЫ ---
