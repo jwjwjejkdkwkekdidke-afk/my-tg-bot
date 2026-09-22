@@ -36,12 +36,6 @@ def get_user_data(user_id: int):
         referrals_db[user_id] = {"referrals": set(), "balance": 0.0}
     return referrals_db[user_id]
 
-# --- УЗНАТЬ ID КАРТИНКИ (ВРЕМЕННО) ---
-@dp.message(F.photo)
-async def get_photo_id(message: types.Message):
-    photo_id = message.photo[-1].file_id
-    await message.answer(f"Вот file_id этой картинки:\n\n{photo_id}")
-
 # --- КЛАВИАТУРЫ ---
 def main_kb():
     kb = InlineKeyboardBuilder()
@@ -104,11 +98,17 @@ async def management_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 Продлить подписку", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_text(
-        text=text,
+    # Отправляем фото с первым file_id
+    await callback.message.answer_photo(
+        photo="AgACAgIAAxkBAAIaxWqy9czlfQQccj5QkvJbptY7olLCAAIeHWsbQ5SYSYbdhFWPcGK8AQADAgADeQADPQQ",
+        caption=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
     await callback.answer()
 
 @dp.callback_query(F.data == "devices")
@@ -147,11 +147,17 @@ async def referral_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="💸 Вывести средства", callback_data="withdraw"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_text(
-        text=text,
+    # Отправляем фото со вторым file_id
+    await callback.message.answer_photo(
+        photo="AgACAgIAAxkBAAIa22qy9xW_fOOxvCLkyknK9Gi99YXWAAI7IGsbtCyZSSQDahaeIZjNAQADAgADeQADPQQ",
+        caption=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
     await callback.answer()
 
 @dp.callback_query(F.data == "withdraw")
@@ -196,11 +202,17 @@ async def info_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_text(
-        text=text,
+    # Отправляем фото с третьим file_id
+    await callback.message.answer_photo(
+        photo="AgACAgIAAxkBAAIa3Wqy9yZmxQyZqEi_2g1KS6wy2aXKAAI9IGsbtCyZSU9cjfdiAAH0WwEAAwIAA3kAAz0E",
+        caption=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
     await callback.answer()
 
 # --- ПОКУПКА / ТАРИФЫ ---
