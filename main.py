@@ -218,7 +218,7 @@ async def info_menu(callback: types.CallbackQuery):
     await callback.answer()
 
 
-# --- ПОКУПКА / ТАРИФЫ (БЕЗ ПОДАРКОВ) ---
+# --- ПОКУПКА / ТАРИФЫ ---
 
 @dp.callback_query(F.data == "buy")
 async def buy_menu(callback: types.CallbackQuery):
@@ -229,31 +229,62 @@ async def buy_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_180"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
-    await callback.message.edit_caption(caption="💳 Выберите срок подписки:", reply_markup=kb.as_markup())
+    # Используем edit_caption для сообщения с картинкой
+    await callback.message.edit_caption(
+        caption="💳 **Выберите срок подписки:**", 
+        parse_mode="Markdown",
+        reply_markup=kb.as_markup()
+    )
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("pay_"))
 async def payment_process(callback: types.CallbackQuery):
     days = callback.data.split("_")[1]
     prices = {"7": "39", "30": "99", "90": "279", "180": "549"}
-    amount = prices[days]
+    amount = prices.get(days, "99")
 
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{amount}"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
 
+    text = (
+        f"💳 **Оплата VPN**\n\n"
+        f"Срок: {days} дней\n"
+        f"Сумма к оплате: *{amount}₽*\n\n"
+        f"Карта для перевода:\n`{UMONEY_CARD}`\n\n"
+        f"После оплаты нажмите кнопку ниже."
+    )
+
     await callback.message.edit_caption(
-        caption=f"💳 **Оплата VPN**\n\nСрок: {days} дней\nСумма к оплате: *{amount}₽*\n\nКарта для перевода:\n`{UMONEY_CARD}`\n\nПосле оплаты нажмите кнопку ниже.",
+        caption=text,
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
     await callback.answer()
 
-# Обработка нажатия "Я оплатил" (заглушка)
+# Исправленная обработка кнопки "Я оплатил"
 @dp.callback_query(F.data.startswith("check_"))
 async def check_payment(callback: types.CallbackQuery):
-    await callback.answer("⚠️ Заявка создана. Ожидайте подтверждения.", show_alert=True)
+    amount = callback.data.split("_")[1]
+    
+    # Уведомляем администратора (если нужно)
+    if ADMIN_ID and ADMIN_ID != 123456789:
+        try:
+            await bot.send_message(
+                ADMIN_ID,
+                f"🔔 **Новая заявка на оплату!**\n\n"
+                f"👤 Пользователь: @{callback.from_user.username} (ID: `{callback.from_user.id}`)\n"
+                f"💰 Сумма: {amount}₽",
+                parse_mode="Markdown"
+            )
+        except Exception:
+            pass
 
+    # Показываем всплывающее уведомление пользователю, чтобы кнопка не «висела»
+    await callback.answer(
+        "✅ Заявка принята! Ожидайте проверки администратором.", 
+        show_alert=True
+    )
 
 # --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ ---
 
