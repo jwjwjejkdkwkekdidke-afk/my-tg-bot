@@ -223,14 +223,14 @@ async def info_menu(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-# --- ПОКУПКА / ТАРИФЫ (Шаг 1: Выбор срока) ---
+# --- ПОКУПКА / ТАРИФЫ (Шаг 1: Выбор срока и цены) ---
 @dp.callback_query(F.data == "buy")
 async def buy_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="📅 7 дней", callback_data="term_7"))
-    kb.row(types.InlineKeyboardButton(text="📅 30 дней", callback_data="term_30"))
-    kb.row(types.InlineKeyboardButton(text="📅 90 дней", callback_data="term_90"))
-    kb.row(types.InlineKeyboardButton(text="📅 180 дней", callback_data="term_180"))
+    kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="term_7"))
+    kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="term_30"))
+    kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="term_90"))
+    kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="term_180"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
     await callback.message.edit_text(
@@ -244,17 +244,17 @@ async def buy_menu(callback: types.CallbackQuery):
 @dp.callback_query(F.data.startswith("term_"))
 async def select_devices(callback: types.CallbackQuery):
     days = callback.data.split("_")[1]
-    # Сохраняем выбранный срок для конкретного пользователя
+    # Сохраняем выбранный срок
     user_checkout[callback.from_user.id] = {"days": days}
 
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="📱 1 устройство", callback_data=f"dev_1"))
-    kb.row(types.InlineKeyboardButton(text="📱📱 3 устройства", callback_data=f"dev_3"))
-    kb.row(types.InlineKeyboardButton(text="📱📱📱 5 устройств", callback_data=f"dev_5"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
+    kb.row(types.InlineKeyboardButton(text="📱 1 устройство", callback_data="dev_1"))
+    kb.row(types.InlineKeyboardButton(text="📱📱 3 устройства", callback_data="dev_3"))
+    kb.row(types.InlineKeyboardButton(text="📱📱📱 5 устройств", callback_data="dev_5"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад к срокам", callback_data="buy"))
 
     await callback.message.edit_text(
-        text=f"📱 **Шаг 2 из 2:** Вы выбрали подписку на **{days} дней**.\n\nТеперь выберите количество устройств:",
+        text=f"📅 Вы выбрали срок: **{days} дней**.\n\n📱 **Шаг 2 из 2:** Выберите количество устройств:",
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
