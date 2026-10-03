@@ -4,7 +4,7 @@ import logging
 
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +19,9 @@ UMONEY_CARD = os.getenv("UMONEY_CARD", "2204128123651537")
 
 # Твой ID администратора
 ADMIN_ID = 8052913358
+
+# ID вашей картинки "ПРОФИЛЬ", полученный из Telegram API
+PROFILE_PHOTO_ID = "AgACAgIAAxkBAAFVdMBqwXUiRfFS5hxbkAOvvGprtE0xmAACZR5rG6rMEUqKvyEmUaxekgEAAwIAA3kAAz0E"
 
 if not TOKEN:
     raise ValueError("ОШИБКА: Токен бота не найден в переменных окружения хостинга!")
@@ -35,51 +38,78 @@ def get_user_data(user_id: int):
     return referrals_db[user_id]
 
 # --- КЛАВИАТУРЫ ---
-def main_kb():
+
+# 1. Постоянная нижняя панель (Reply-клавиатура)
+def main_reply_kb():
+    builder = ReplyKeyboardBuilder()
+    builder.button(text="Главное меню")
+    builder.adjust(1)
+    return builder.as_markup(resize_keyboard=True)
+
+# 2. Инлайн-меню для главного экрана (как на 2-й фотографии)
+def profile_inline_kb():
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="🛡 Управление VPN", callback_data="management"))
+    kb.row(types.InlineKeyboardButton(text="🔗 Подключить VPN (3 устройства)", callback_data="management"))
+    kb.row(types.InlineKeyboardButton(text="⚙️ Управление подпиской", callback_data="management"))
+    kb.row(types.InlineKeyboardButton(text="🛍 Купить подписку", callback_data="buy"))
     kb.row(
-        types.InlineKeyboardButton(text="👥 Реферальная программа", callback_data="referral"),
-        types.InlineKeyboardButton(text="💬 Поддержка", callback_data="support")
+        types.InlineKeyboardButton(text="💰 Заработок", callback_data="referral"),
+        types.InlineKeyboardButton(text="🌐 Наш сайт", url="https://speedgamer.top") # Замените на ваш сайт, если нужно
     )
-    kb.row(types.InlineKeyboardButton(text="ℹ️ Информация", callback_data="info"))
+    kb.row(
+        types.InlineKeyboardButton(text="💬 О сервисе", callback_data="info"),
+        types.InlineKeyboardButton(text="✈️ Поддержка", callback_data="support")
+    )
     return kb.as_markup()
 
-# --- ОБРАБОТЧИК /START ---
+# --- ОБРАБОТЧИК /START И КНОПКИ "Главное меню" ---
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
-    args = message.text.split()
+    await send_main_menu(message=message, is_new=True)
+
+@dp.message(F.text == "Главное меню")
+async def text_main_menu(message: types.Message):
+    await send_main_menu(message=message, is_new=True)
+
+async def send_main_menu(message: types.Message, is_new: bool = False):
     user_id = message.from_user.id
     get_user_data(user_id)
     
-    if len(args) > 1:
-        try:
-            referrer_id = int(args[1])
-            if referrer_id != user_id:
-                ref_data = get_user_data(referrer_id)
-                if user_id not in ref_data["referrals"]:
-                    ref_data["referrals"].add(user_id)
-                    try:
-                        await bot.send_message(
-                            referrer_id, 
-                            "🎉 По вашей реферальной ссылке зарегистрировался новый пользователь!"
-                        )
-                    except Exception:
-                        pass
-        except ValueError:
-            pass
+    # Обработка реферального параметра в /start
+    if is_new and hasattr(message, "text") and message.text:
+        args = message.text.split()
+        if len(args) > 1:
+            try:
+                referrer_id = int(args[1])
+                if referrer_id != user_id:
+                    ref_data = get_user_data(referrer_id)
+                    if user_id not in ref_data["referrals"]:
+                        ref_data["referrals"].add(user_id)
+                        try:
+                            await bot.send_message(
+                                referrer_id, 
+                                "🎉 По вашей реферальной ссылке зарегистрировался новый пользователь!"
+                            )
+                        except Exception:
+                            pass
+            except ValueError:
+                pass
 
-    text = (
-        "✨ **Добро пожаловать в AuraVPN**\n\n"
-        "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
-        "⬇️ Выберите раздел в меню ниже:"
+    caption_text = (
+        "@7\n"
+        "📦 **3 устройства: Активна до 13.10.2026**\n"
+        "`https://sub.speedgamer.top/WiX9IZrkDtyyGxx`"
     )
-    
-    await message.answer(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=main_kb()
-    )
+
+    # Отправляем фото с красивым оформлением и нижним меню
+    if is_new:
+        await message.answer_photo(
+            photo=PROFILE_PHOTO_ID,
+            caption=caption_text,
+            parse_mode="Markdown",
+            reply_markup=profile_inline_kb()
+        )
+        await message.answer("⬇️ Используйте панель меню ниже:", reply_markup=main_reply_kb())
 
 # --- 1. УПРАВЛЕНИЕ VPN ---
 @dp.callback_query(F.data == "management")
@@ -92,15 +122,28 @@ async def management_menu(callback: types.CallbackQuery):
     )
     
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="📱 Устройства", callback_data="devices"))
-    kb.row(types.InlineKeyboardButton(text="📅 Продлить подписку", callback_data="buy"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
-
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=kb.as_markup()
+    kb.row(
+        types.InlineKeyboardButton(text="📱 Устройства", callback_data="devices"),
+        types.InlineKeyboardButton(text="📅 Продлить подписку", callback_data="buy")
     )
+    kb.row(
+        types.InlineKeyboardButton(text="⚙️ Настройки", callback_data="management"),
+        types.InlineKeyboardButton(text="🛍 Купить подписку", callback_data="buy")
+    )
+    kb.row(
+        types.InlineKeyboardButton(text="💬 О сервисе", callback_data="info"),
+        types.InlineKeyboardButton(text="✈️ Поддержка", callback_data="support")
+    )
+
+    # Поскольку в главном сообщении картинка, при переходе к управлению можно обновить подпись и клавиатуру
+    try:
+        await callback.message.edit_caption(
+            caption=text,
+            parse_mode="Markdown",
+            reply_markup=kb.as_markup()
+        )
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 @dp.callback_query(F.data == "devices")
@@ -109,11 +152,11 @@ async def devices_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="➕ Подключить новое устройство", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
 
-    await callback.message.edit_text(
-        text="📱 **Ваши устройства**\n\nУ вас пока нет активных подключений.",
-        parse_mode="Markdown",
-        reply_markup=kb.as_markup()
-    )
+    text = "📱 **Ваши устройства**\n\nУ вас пока нет активных подключений."
+    try:
+        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 # --- 2. РЕФЕРАЛЬНАЯ ПРОГРАММА ---
@@ -139,11 +182,10 @@ async def referral_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="💸 Вывести средства", callback_data="withdraw"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=kb.as_markup()
-    )
+    try:
+        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 @dp.callback_query(F.data == "withdraw")
@@ -167,11 +209,10 @@ async def support_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=kb.as_markup()
-    )
+    try:
+        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 # --- 4. ИНФОРМАЦИЯ ---
@@ -188,11 +229,10 @@ async def info_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=kb.as_markup()
-    )
+    try:
+        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 # --- ПОКУПКА / ТАРИФЫ ---
@@ -203,13 +243,13 @@ async def buy_menu(callback: types.CallbackQuery):
     kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="pay_30"))
     kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="pay_90"))
     kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_180"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="management"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back"))
 
-    await callback.message.edit_text(
-        text="💳 **Выберите срок подписки:**", 
-        parse_mode="Markdown",
-        reply_markup=kb.as_markup()
-    )
+    text = "💳 **Выберите срок подписки:**"
+    try:
+        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("pay_"))
@@ -230,11 +270,10 @@ async def payment_process(callback: types.CallbackQuery):
         f"После оплаты нажмите кнопку ниже."
     )
 
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=kb.as_markup()
-    )
+    try:
+        await callback.message.edit_caption(caption=text, parse_mode="Markdown", reply_markup=kb.as_markup())
+    except Exception:
+        await callback.message.answer(text, parse_mode="Markdown", reply_markup=kb.as_markup())
     await callback.answer()
 
 @dp.callback_query(F.data.startswith("check_"))
@@ -258,20 +297,27 @@ async def check_payment(callback: types.CallbackQuery):
         show_alert=True
     )
 
-# --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ ---
+# --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ЧЕРЕЗ КНОПКИ НАЗАД) ---
 @dp.callback_query(F.data == "back")
 async def back_to_main(callback: types.CallbackQuery):
-    text = (
-        "✨ **Добро пожаловать в AuraVPN**\n\n"
-        "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
-        "⬇️ Выберите раздел в меню ниже:"
+    caption_text = (
+        "@7\n"
+        "📦 **3 устройства: Активна до 13.10.2026**\n"
+        "`https://sub.speedgamer.top/WiX9IZrkDtyyGxx`"
     )
-    
-    await callback.message.edit_text(
-        text=text,
-        parse_mode="Markdown",
-        reply_markup=main_kb()
-    )
+    try:
+        await callback.message.edit_caption(
+            caption=caption_text,
+            parse_mode="Markdown",
+            reply_markup=profile_inline_kb()
+        )
+    except Exception:
+        await callback.message.answer_photo(
+            photo=PROFILE_PHOTO_ID,
+            caption=caption_text,
+            parse_mode="Markdown",
+            reply_markup=profile_inline_kb()
+        )
     await callback.answer()
 
 # --- ЗАПУСК ---
