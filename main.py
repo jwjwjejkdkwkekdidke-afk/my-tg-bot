@@ -28,6 +28,8 @@ dp = Dispatcher()
 
 # --- ВРЕМЕННАЯ БАЗА ДАННЫХ ---
 referrals_db = {}
+# Словарь для временного хранения выбора пользователя (days, devices) при оформлении
+user_checkout = {}
 
 def get_user_data(user_id: int):
     if user_id not in referrals_db:
@@ -43,11 +45,11 @@ def main_reply_kb():
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
 
-# 2. Инлайн-меню для главного экрана (только нужные кнопки)
+# 2. Инлайн-меню для главного экрана
 def profile_inline_kb():
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="🔗 Подключить VPN (3 устройства)", callback_data="management"))
-    kb.row(types.InlineKeyboardButton(text="⚙️️ Управление подпиской", callback_data="management"))
+    kb.row(types.InlineKeyboardButton(text="⚙ Управление подпиской", callback_data="management"))
     kb.row(types.InlineKeyboardButton(text="🛍 Купить подписку", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="💰 Заработок", callback_data="referral"))
     kb.row(
@@ -56,7 +58,7 @@ def profile_inline_kb():
     )
     return kb.as_markup()
 
-# --- ТЕКСТ ГЛАВНОГО МЕНЮ (ЧИСТЫЙ) ---
+# --- ТЕКСТ ГЛАВНОГО МЕНЮ ---
 def get_main_menu_text():
     return (
         "✨ **Добро пожаловать в AuraVPN**\n\n"
@@ -94,7 +96,7 @@ async def start_command(message: types.Message):
         parse_mode="Markdown",
         reply_markup=profile_inline_kb()
     )
-    await message.answer("⬇️️ Используйте панель меню ниже:", reply_markup=main_reply_kb())
+    await message.answer("⬇️ Используйте панель меню ниже:", reply_markup=main_reply_kb())
 
 @dp.message(F.text == "🏠 Главное меню")
 async def text_main_menu(message: types.Message):
@@ -191,7 +193,7 @@ async def support_menu(callback: types.CallbackQuery):
     )
     
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
+    kb.row(types.InlineKeyboardButton(text="⬅️️ Главное меню", callback_data="back"))
 
     await callback.message.edit_text(
         text=text,
@@ -221,39 +223,71 @@ async def info_menu(callback: types.CallbackQuery):
     )
     await callback.answer()
 
-# --- ПОКУПКА / ТАРИФЫ ---
+# --- ПОКУПКА / ТАРИФЫ (Шаг 1: Выбор срока) ---
 @dp.callback_query(F.data == "buy")
 async def buy_menu(callback: types.CallbackQuery):
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="📅 7 дней — 39₽", callback_data="pay_7"))
-    kb.row(types.InlineKeyboardButton(text="📅 30 дней — 99₽", callback_data="pay_30"))
-    kb.row(types.InlineKeyboardButton(text="📅 90 дней — 279₽", callback_data="pay_90"))
-    kb.row(types.InlineKeyboardButton(text="📅 180 дней — 549₽", callback_data="pay_180"))
+    kb.row(types.InlineKeyboardButton(text="📅 7 дней", callback_data="term_7"))
+    kb.row(types.InlineKeyboardButton(text="📅 30 дней", callback_data="term_30"))
+    kb.row(types.InlineKeyboardButton(text="📅 90 дней", callback_data="term_90"))
+    kb.row(types.InlineKeyboardButton(text="📅 180 дней", callback_data="term_180"))
     kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
     await callback.message.edit_text(
-        text="💳 **Выберите срок подписки:**", 
+        text="💳 **Шаг 1 из 2:** Выберите срок подписки:", 
         parse_mode="Markdown",
         reply_markup=kb.as_markup()
     )
     await callback.answer()
 
-@dp.callback_query(F.data.startswith("pay_"))
-async def payment_process(callback: types.CallbackQuery):
+# --- ВЫБОР УСТРОЙСТВ (Шаг 2: Выбор количества устройств) ---
+@dp.callback_query(F.data.startswith("term_"))
+async def select_devices(callback: types.CallbackQuery):
     days = callback.data.split("_")[1]
-    prices = {"7": "39", "30": "99", "90": "279", "180": "549"}
-    amount = prices.get(days, "99")
+    # Сохраняем выбранный срок для конкретного пользователя
+    user_checkout[callback.from_user.id] = {"days": days}
+
+    kb = InlineKeyboardBuilder()
+    kb.row(types.InlineKeyboardButton(text="📱 1 устройство", callback_data=f"dev_1"))
+    kb.row(types.InlineKeyboardButton(text="📱📱 3 устройства", callback_data=f"dev_3"))
+    kb.row(types.InlineKeyboardButton(text="📱📱📱 5 устройств", callback_data=f"dev_5"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
+
+    await callback.message.edit_text(
+        text=f"📱 **Шаг 2 из 2:** Вы выбрали подписку на **{days} дней**.\n\nТеперь выберите количество устройств:",
+        parse_mode="Markdown",
+        reply_markup=kb.as_markup()
+    )
+    await callback.answer()
+
+# --- ОПЛАТА (Итоговый расчет стоимости) ---
+@dp.callback_query(F.data.startswith("dev_"))
+async def payment_process(callback: types.CallbackQuery):
+    devices_count = callback.data.split("_")[1]
+    user_id = callback.from_user.id
+    
+    # Достаем сохраненный срок, если нет — по умолчанию 30 дней
+    days = user_checkout.get(user_id, {}).get("days", "30")
+
+    # Базовая таблица цен для 1 устройства
+    base_prices = {"7": 39, "30": 99, "90": 279, "180": 549}
+    base_price = base_prices.get(days, 99)
+
+    # Коэффициент цены в зависимости от количества устройств
+    multiplier = 1 if devices_count == "1" else (2.5 if devices_count == "3" else 4)
+    amount = int(base_price * multiplier)
 
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="✅ Я оплатил", callback_data=f"check_{amount}"))
-    kb.row(types.InlineKeyboardButton(text="⬅️ Назад", callback_data="buy"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Назад к выбору устройств", callback_data=f"term_{days}"))
 
     text = (
         f"💳 **Оплата VPN**\n\n"
-        f"Срок: {days} дней\n"
-        f"Сумма к оплате: *{amount}₽*\n\n"
+        f"📅 Срок: **{days} дней**\n"
+        f"📱 Устройств: **{devices_count}**\n"
+        f"💰 Сумма к оплате: *{amount} ₽*\n\n"
         f"Карта для перевода:\n`{UMONEY_CARD}`\n\n"
-        f"После оплаты нажмите кнопку ниже."
+        f"После перевода средств нажмите кнопку ниже."
     )
 
     await callback.message.edit_text(
