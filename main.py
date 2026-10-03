@@ -43,11 +43,11 @@ def main_reply_kb():
     builder.adjust(1)
     return builder.as_markup(resize_keyboard=True)
 
-# 2. Инлайн-меню для главного экрана
+# 2. Инлайн-меню для главного экрана (только нужные кнопки)
 def profile_inline_kb():
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="🔗 Подключить VPN (3 устройства)", callback_data="management"))
-    kb.row(types.InlineKeyboardButton(text="⚙ Управление подпиской", callback_data="management"))
+    kb.row(types.InlineKeyboardButton(text="⚙️️ Управление подпиской", callback_data="management"))
     kb.row(types.InlineKeyboardButton(text="🛍 Купить подписку", callback_data="buy"))
     kb.row(types.InlineKeyboardButton(text="💰 Заработок", callback_data="referral"))
     kb.row(
@@ -56,7 +56,7 @@ def profile_inline_kb():
     )
     return kb.as_markup()
 
-# --- ТЕКСТ ГЛАВНОГО МЕНЮ (ОБНОВЛЕННЫЙ) ---
+# --- ТЕКСТ ГЛАВНОГО МЕНЮ (ЧИСТЫЙ) ---
 def get_main_menu_text():
     return (
         "✨ **Добро пожаловать в AuraVPN**\n\n"
