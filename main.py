@@ -47,25 +47,20 @@ def main_reply_kb():
 def profile_inline_kb():
     kb = InlineKeyboardBuilder()
     kb.row(types.InlineKeyboardButton(text="🔗 Подключить VPN (3 устройства)", callback_data="management"))
-    kb.row(types.InlineKeyboardButton(text="⚙️️ Управление подпиской", callback_data="management"))
+    kb.row(types.InlineKeyboardButton(text="⚙ Управление подпиской", callback_data="management"))
     kb.row(types.InlineKeyboardButton(text="🛍 Купить подписку", callback_data="buy"))
-    kb.row(
-        types.InlineKeyboardButton(text="💰 Заработок", callback_data="referral"),
-        types.InlineKeyboardButton(text="🌐 Наш сайт", url="https://speedgamer.top")
-    )
+    kb.row(types.InlineKeyboardButton(text="💰 Заработок", callback_data="referral"))
     kb.row(
         types.InlineKeyboardButton(text="💬 О сервисе", callback_data="info"),
         types.InlineKeyboardButton(text="✈️ Поддержка", callback_data="support")
     )
     return kb.as_markup()
 
-# --- ТЕКСТ ГЛАВНОГО МЕНЮ ---
+# --- ТЕКСТ ГЛАВНОГО МЕНЮ (ОБНОВЛЕННЫЙ) ---
 def get_main_menu_text():
     return (
         "✨ **Добро пожаловать в AuraVPN**\n\n"
-        "📦 **3 устройства: Активна до 13.10.2026**\n"
-        "🔗 Подписка: `https://sub.speedgamer.top/WiX9IZrkDtyyGxx`\n\n"
-        "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n"
+        "💬 *Надёжный VPN без логов, без ограничений по скорости и трафику.*\n\n"
         "⬇️ Выберите раздел в меню ниже:"
     )
 
@@ -99,7 +94,7 @@ async def start_command(message: types.Message):
         parse_mode="Markdown",
         reply_markup=profile_inline_kb()
     )
-    await message.answer("⬇️ Используйте панель меню ниже:", reply_markup=main_reply_kb())
+    await message.answer("⬇️️ Используйте панель меню ниже:", reply_markup=main_reply_kb())
 
 @dp.message(F.text == "🏠 Главное меню")
 async def text_main_menu(message: types.Message):
@@ -196,7 +191,7 @@ async def support_menu(callback: types.CallbackQuery):
     )
     
     kb = InlineKeyboardBuilder()
-    kb.row(types.InlineKeyboardButton(text="⬅️️ Главное меню", callback_data="back"))
+    kb.row(types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back"))
 
     await callback.message.edit_text(
         text=text,
