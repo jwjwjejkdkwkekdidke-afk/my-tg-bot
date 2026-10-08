@@ -31,7 +31,7 @@ DB_FILE = "auravpn.db"
 
 
 # =========================================================
-# ТАРИФЫ
+# ТАРИФЫ И МНОЖИТЕЛИ УСТРОЙСТВ
 # =========================================================
 
 PLANS = {
@@ -39,6 +39,13 @@ PLANS = {
     30: 99,
     90: 279,
     180: 549
+}
+
+# Коэффициенты цены в зависимости от количества устройств
+DEVICE_MULTIPLIERS = {
+    1: 1.0,
+    3: 2.5,
+    5: 4.0
 }
 
 
@@ -57,7 +64,6 @@ logging.basicConfig(
 # =========================================================
 
 def init_db():
-
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
@@ -83,7 +89,6 @@ def init_db():
 
 
 def is_banned(user_id: int) -> bool:
-
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
@@ -93,14 +98,11 @@ def is_banned(user_id: int) -> bool:
     )
 
     result = cur.fetchone()
-
     conn.close()
-
     return result is not None
 
 
 def ban_user(user_id: int):
-
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
@@ -119,7 +121,6 @@ def create_purchase(
     devices: int,
     amount: int
 ):
-
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
@@ -146,7 +147,6 @@ def update_purchase(
     purchase_id: int,
     status: str
 ):
-
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
@@ -169,7 +169,6 @@ def update_purchase(
 def get_purchase_status(
     purchase_id: int
 ):
-
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
@@ -183,7 +182,6 @@ def get_purchase_status(
     )
 
     result = cur.fetchone()
-
     conn.close()
 
     if result:
@@ -208,7 +206,6 @@ dp = Dispatcher()
 # =========================================================
 
 def bottom_keyboard():
-
     return ReplyKeyboardMarkup(
         keyboard=[
             [
@@ -246,7 +243,6 @@ def bottom_keyboard():
 # =========================================================
 
 def main_menu():
-
     builder = InlineKeyboardBuilder()
 
     builder.button(
@@ -289,7 +285,6 @@ def main_menu():
 # =========================================================
 
 def welcome_text():
-
     return (
         "✨ <b>Добро пожаловать в AuraVPN!</b>\n\n"
         "🔐 Быстрый и стабильный VPN\n"
@@ -304,7 +299,6 @@ def welcome_text():
 # =========================================================
 
 def back_button():
-
     builder = InlineKeyboardBuilder()
 
     builder.button(
@@ -320,7 +314,6 @@ def back_button():
 # =========================================================
 
 def plans_keyboard():
-
     builder = InlineKeyboardBuilder()
 
     builder.button(
@@ -354,27 +347,19 @@ def plans_keyboard():
 
 
 # =========================================================
-# УСТРОЙСТВА
+# УСТРОЙСТВА (С ДИНАМИЧЕСКИМИ ЦЕНАМИ)
 # =========================================================
 
 def devices_keyboard(days: int):
-
     builder = InlineKeyboardBuilder()
+    base_price = PLANS[days]
 
-    builder.button(
-        text="📱 1 устройство",
-        callback_data=f"device_{days}_1"
-    )
-
-    builder.button(
-        text="📱 3 устройства",
-        callback_data=f"device_{days}_3"
-    )
-
-    builder.button(
-        text="📱 5 устройств",
-        callback_data=f"device_{days}_5"
-    )
+    for dev_count, multiplier in DEVICE_MULTIPLIERS.items():
+        price = int(base_price * multiplier)
+        builder.button(
+            text=f"📱 {dev_count} устр. — {price} ₽",
+            callback_data=f"device_{days}_{dev_count}"
+        )
 
     builder.button(
         text="⬅️ Назад",
@@ -394,7 +379,6 @@ def payment_keyboard(
     days: int,
     devices: int
 ):
-
     builder = InlineKeyboardBuilder()
 
     # КОПИРУЕМАЯ КАРТА
@@ -434,7 +418,6 @@ def admin_keyboard(
     purchase_id: int,
     user_id: int
 ):
-
     builder = InlineKeyboardBuilder()
 
     builder.button(
@@ -459,16 +442,13 @@ def admin_keyboard(
 async def check_user(
     callback: types.CallbackQuery
 ):
-
     if is_banned(
         callback.from_user.id
     ):
-
         await callback.answer(
             "❌ Вы заблокированы.",
             show_alert=True
         )
-
         return False
 
     return True
@@ -482,20 +462,21 @@ async def check_user(
 async def start_handler(
     message: types.Message
 ):
-
     user_id = message.from_user.id
 
     if is_banned(user_id):
-
         await message.answer(
-            "❌ Вы заблокированы и не можете "
-            "пользоваться ботом."
+            "❌ Вы заблокированы и не можете пользоваться ботом."
         )
-
         return
 
-    # Одно сообщение:
-    # приветствие + главное меню
+    # Отправляем нижнюю панель клавиатуры
+    await message.answer(
+        "⬇️ Панель управления активирована:",
+        reply_markup=bottom_keyboard()
+    )
+
+    # Приветствие с главным инлайн-меню
     await message.answer(
         welcome_text(),
         parse_mode="HTML",
@@ -513,16 +494,18 @@ async def start_handler(
 async def bottom_main_menu(
     message: types.Message
 ):
-
     if is_banned(
         message.from_user.id
     ):
-
         await message.answer(
             "❌ Вы заблокированы."
         )
-
         return
+
+    await message.answer(
+        "🏠 Главное меню:",
+        reply_markup=bottom_keyboard()
+    )
 
     await message.answer(
         welcome_text(),
@@ -541,15 +524,12 @@ async def bottom_main_menu(
 async def bottom_buy(
     message: types.Message
 ):
-
     if is_banned(
         message.from_user.id
     ):
-
         await message.answer(
             "❌ Вы заблокированы."
         )
-
         return
 
     await message.answer(
@@ -570,15 +550,12 @@ async def bottom_buy(
 async def bottom_vpn(
     message: types.Message
 ):
-
     if is_banned(
         message.from_user.id
     ):
-
         await message.answer(
             "❌ Вы заблокированы."
         )
-
         return
 
     await message.answer(
@@ -601,15 +578,12 @@ async def bottom_vpn(
 async def bottom_devices(
     message: types.Message
 ):
-
     if is_banned(
         message.from_user.id
     ):
-
         await message.answer(
             "❌ Вы заблокированы."
         )
-
         return
 
     await message.answer(
@@ -631,15 +605,12 @@ async def bottom_devices(
 async def bottom_referral(
     message: types.Message
 ):
-
     if is_banned(
         message.from_user.id
     ):
-
         await message.answer(
             "❌ Вы заблокированы."
         )
-
         return
 
     me = await bot.get_me()
@@ -668,15 +639,12 @@ async def bottom_referral(
 async def bottom_support(
     message: types.Message
 ):
-
     if is_banned(
         message.from_user.id
     ):
-
         await message.answer(
             "❌ Вы заблокированы."
         )
-
         return
 
     await message.answer(
@@ -699,7 +667,6 @@ async def bottom_support(
 async def main_menu_callback(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -722,7 +689,6 @@ async def main_menu_callback(
 async def menu_vpn(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -748,7 +714,6 @@ async def menu_vpn(
 async def menu_buy(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -772,7 +737,6 @@ async def menu_buy(
 async def menu_devices(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -797,7 +761,6 @@ async def menu_devices(
 async def menu_referral(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -829,7 +792,6 @@ async def menu_referral(
 async def menu_support(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -855,7 +817,6 @@ async def menu_support(
 async def menu_about(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -882,7 +843,6 @@ async def menu_about(
 async def plan_7(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -898,7 +858,6 @@ async def plan_7(
 async def plan_30(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -914,7 +873,6 @@ async def plan_30(
 async def plan_90(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -930,7 +888,6 @@ async def plan_90(
 async def plan_180(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
@@ -948,12 +905,11 @@ async def show_devices(
     callback: types.CallbackQuery,
     days: int
 ):
-
     price = PLANS[days]
 
     await callback.message.edit_text(
         f"💳 <b>Подписка на {days} дней</b>\n\n"
-        f"💰 Стоимость: <b>{price} ₽</b>\n\n"
+        f"💰 Базовая стоимость (1 устр.): <b>{price} ₽</b>\n\n"
         "📱 Выберите количество устройств:",
         parse_mode="HTML",
         reply_markup=devices_keyboard(days)
@@ -972,59 +928,46 @@ async def show_devices(
 async def device_handler(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
     try:
-
         parts = callback.data.split("_")
-
         days = int(parts[1])
         devices = int(parts[2])
-
     except (
         ValueError,
         IndexError
     ):
-
         await callback.answer(
             "Ошибка выбора тарифа.",
             show_alert=True
         )
-
         return
 
-    if days not in PLANS:
-
+    if days not in PLANS or devices not in DEVICE_MULTIPLIERS:
         await callback.answer(
             "Неизвестный тариф.",
             show_alert=True
         )
-
         return
 
-    price = PLANS[days]
+    # Расчет динамической цены
+    multiplier = DEVICE_MULTIPLIERS[devices]
+    price = int(PLANS[days] * multiplier)
 
     await callback.message.edit_text(
         "💳 <b>Оплата AuraVPN</b>\n\n"
-
         f"📅 Срок: <b>{days} дней</b>\n"
         f"📱 Устройств: <b>{devices}</b>\n"
         f"💰 Сумма: <b>{price} ₽</b>\n\n"
-
         "━━━━━━━━━━━━━━\n\n"
-
         "💳 <b>Реквизиты для оплаты</b>\n\n"
-
         "👇 Нажмите на кнопку с номером карты, "
         "чтобы скопировать её.\n\n"
-
         "После оплаты нажмите "
         "«✅ Я оплатил».",
-
         parse_mode="HTML",
-
         reply_markup=payment_keyboard(
             days,
             devices
@@ -1044,40 +987,34 @@ async def device_handler(
 async def paid_handler(
     callback: types.CallbackQuery
 ):
-
     if not await check_user(callback):
         return
 
     try:
-
         parts = callback.data.split("_")
-
         days = int(parts[1])
         devices = int(parts[2])
-
     except (
         ValueError,
         IndexError
     ):
-
         await callback.answer(
             "Ошибка данных оплаты.",
             show_alert=True
         )
-
         return
 
-    amount = PLANS.get(days)
+    base_price = PLANS.get(days)
+    multiplier = DEVICE_MULTIPLIERS.get(devices)
 
-    if amount is None:
-
+    if base_price is None or multiplier is None:
         await callback.answer(
             "Ошибка тарифа.",
             show_alert=True
         )
-
         return
 
+    amount = int(base_price * multiplier)
     user_id = callback.from_user.id
 
     purchase_id = create_purchase(
@@ -1096,22 +1033,17 @@ async def paid_handler(
 
     admin_text = (
         "💳 <b>НОВАЯ ОПЛАТА</b>\n\n"
-
         f"👤 Имя: {callback.from_user.first_name}\n"
         f"🔗 Username: {username_text}\n"
         f"🆔 ID: <code>{user_id}</code>\n\n"
-
         f"📅 Срок: <b>{days} дней</b>\n"
         f"📱 Устройств: <b>{devices}</b>\n"
         f"💰 Сумма: <b>{amount} ₽</b>\n\n"
-
         f"🧾 Заявка № <code>{purchase_id}</code>\n\n"
-
         "Выберите действие:"
     )
 
     try:
-
         await bot.send_message(
             ADMIN_ID,
             admin_text,
@@ -1121,9 +1053,7 @@ async def paid_handler(
                 user_id
             )
         )
-
     except Exception as e:
-
         logging.error(
             f"Ошибка отправки админу: {e}"
         )
@@ -1131,11 +1061,8 @@ async def paid_handler(
     await callback.message.edit_text(
         "⏳ <b>Оплата отправлена "
         "на проверку.</b>\n\n"
-
         "Администратор проверит оплату.\n\n"
-
         "Пожалуйста, ожидайте.",
-
         parse_mode="HTML",
         reply_markup=back_button()
     )
@@ -1155,33 +1082,25 @@ async def paid_handler(
 async def accept_handler(
     callback: types.CallbackQuery
 ):
-
     if callback.from_user.id != ADMIN_ID:
-
         await callback.answer(
             "❌ Нет доступа.",
             show_alert=True
         )
-
         return
 
     try:
-
         parts = callback.data.split("_")
-
         purchase_id = int(parts[1])
         user_id = int(parts[2])
-
     except (
         ValueError,
         IndexError
     ):
-
         await callback.answer(
             "Ошибка данных.",
             show_alert=True
         )
-
         return
 
     current_status = get_purchase_status(
@@ -1189,12 +1108,10 @@ async def accept_handler(
     )
 
     if current_status != "pending":
-
         await callback.answer(
             "Эта заявка уже обработана.",
             show_alert=True
         )
-
         return
 
     update_purchase(
@@ -1203,35 +1120,26 @@ async def accept_handler(
     )
 
     try:
-
         await bot.send_message(
             user_id,
-
             "✅ <b>Оплата подтверждена!</b>\n\n"
             "Ваша подписка AuraVPN активирована.",
-
             parse_mode="HTML"
         )
-
     except Exception as e:
-
         logging.error(
             f"Ошибка отправки пользователю: {e}"
         )
 
     try:
-
         await callback.message.edit_text(
             callback.message.text
             + "\n\n"
             "━━━━━━━━━━━━━━\n"
             "✅ <b>ОПЛАТА ПРИНЯТА</b>",
-
             parse_mode="HTML"
         )
-
     except Exception as e:
-
         logging.error(
             f"Ошибка изменения сообщения: {e}"
         )
@@ -1251,33 +1159,25 @@ async def accept_handler(
 async def reject_handler(
     callback: types.CallbackQuery
 ):
-
     if callback.from_user.id != ADMIN_ID:
-
         await callback.answer(
             "❌ Нет доступа.",
             show_alert=True
         )
-
         return
 
     try:
-
         parts = callback.data.split("_")
-
         purchase_id = int(parts[1])
         user_id = int(parts[2])
-
     except (
         ValueError,
         IndexError
     ):
-
         await callback.answer(
             "Ошибка данных.",
             show_alert=True
         )
-
         return
 
     current_status = get_purchase_status(
@@ -1285,12 +1185,10 @@ async def reject_handler(
     )
 
     if current_status != "pending":
-
         await callback.answer(
             "Эта заявка уже обработана.",
             show_alert=True
         )
-
         return
 
     update_purchase(
@@ -1303,37 +1201,28 @@ async def reject_handler(
     )
 
     try:
-
         await bot.send_message(
             user_id,
-
             "❌ <b>Ваша заявка отклонена.</b>\n\n"
             "Вы были заблокированы и больше "
             "не можете пользоваться ботом.",
-
             parse_mode="HTML"
         )
-
     except Exception as e:
-
         logging.error(
             f"Ошибка отправки пользователю: {e}"
         )
 
     try:
-
         await callback.message.edit_text(
             callback.message.text
             + "\n\n"
             "━━━━━━━━━━━━━━\n"
             "❌ <b>ОТКЛОНЕНО</b>\n"
             "🚫 <b>ПОЛЬЗОВАТЕЛЬ ЗАБЛОКИРОВАН</b>",
-
             parse_mode="HTML"
         )
-
     except Exception as e:
-
         logging.error(
             f"Ошибка изменения сообщения: {e}"
         )
@@ -1351,15 +1240,12 @@ async def reject_handler(
 async def other_messages(
     message: types.Message
 ):
-
     if is_banned(
         message.from_user.id
     ):
-
         await message.answer(
             "❌ Вы заблокированы."
         )
-
         return
 
     await message.answer(
@@ -1373,7 +1259,6 @@ async def other_messages(
 # =========================================================
 
 async def main():
-
     init_db()
 
     logging.info(
@@ -1381,13 +1266,10 @@ async def main():
     )
 
     try:
-
         await bot.delete_webhook(
             drop_pending_updates=True
         )
-
     except Exception as e:
-
         logging.warning(
             f"Ошибка удаления webhook: {e}"
         )
@@ -1406,15 +1288,11 @@ async def main():
 # =========================================================
 
 if __name__ == "__main__":
-
     try:
-
         asyncio.run(
             main()
         )
-
     except KeyboardInterrupt:
-
         logging.info(
             "AuraVPN остановлен."
         )
