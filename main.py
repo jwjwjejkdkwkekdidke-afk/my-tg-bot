@@ -6,13 +6,14 @@ import sqlite3
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
 # =========================================================
 # НАСТРОЙКИ
 # =========================================================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "ВСТАВЬ_ТОКЕН_СЮДА")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "ВСТАВЬ_СЮДА_ТОКЕН")
 
 ADMIN_ID = 8052913358
 
@@ -22,14 +23,14 @@ DB_FILE = "auravpn.db"
 
 
 # =========================================================
-# ЦЕНЫ
+# ТАРИФЫ
 # =========================================================
 
 PLANS = {
-    "7": 39,
-    "30": 99,
-    "90": 279,
-    "180": 549,
+    7: 39,
+    30: 99,
+    90: 279,
+    180: 549
 }
 
 
@@ -44,28 +45,16 @@ logging.basicConfig(
 
 
 # =========================================================
-# БАЗА ДАННЫХ
+# БАЗА
 # =========================================================
 
-def db_connect():
-    return sqlite3.connect(DB_FILE)
-
-
 def init_db():
-    conn = db_connect()
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS banned_users (
             user_id INTEGER PRIMARY KEY
-        )
-    """)
-
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY,
-            username TEXT,
-            first_name TEXT
         )
     """)
 
@@ -84,26 +73,8 @@ def init_db():
     conn.close()
 
 
-def save_user(user: types.User):
-    conn = db_connect()
-    cur = conn.cursor()
-
-    cur.execute("""
-        INSERT OR REPLACE INTO users
-        (user_id, username, first_name)
-        VALUES (?, ?, ?)
-    """, (
-        user.id,
-        user.username or "",
-        user.first_name or ""
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-def is_banned(user_id: int):
-    conn = db_connect()
+def is_banned(user_id: int) -> bool:
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
     cur.execute(
@@ -119,7 +90,7 @@ def is_banned(user_id: int):
 
 
 def ban_user(user_id: int):
-    conn = db_connect()
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
     cur.execute(
@@ -132,7 +103,7 @@ def ban_user(user_id: int):
 
 
 def create_purchase(user_id, days, devices, amount):
-    conn = db_connect()
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
     cur.execute("""
@@ -154,18 +125,14 @@ def create_purchase(user_id, days, devices, amount):
     return purchase_id
 
 
-def update_purchase_status(purchase_id, status):
-    conn = db_connect()
+def update_purchase(purchase_id, status):
+    conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
 
-    cur.execute("""
-        UPDATE purchases
-        SET status = ?
-        WHERE id = ?
-    """, (
-        status,
-        purchase_id
-    ))
+    cur.execute(
+        "UPDATE purchases SET status = ? WHERE id = ?",
+        (status, purchase_id)
+    )
 
     conn.commit()
     conn.close()
@@ -180,7 +147,32 @@ dp = Dispatcher()
 
 
 # =========================================================
-# ГЛАВНОЕ МЕНЮ
+# НИЖНЯЯ ПАНЕЛЬ TELEGRAM
+# =========================================================
+
+def bottom_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text="🏠 Главное меню"),
+                KeyboardButton(text="💳 Купить подписку")
+            ],
+            [
+                KeyboardButton(text="🔐 Мой VPN"),
+                KeyboardButton(text="📱 Устройства")
+            ],
+            [
+                KeyboardButton(text="🎁 Пригласить друга"),
+                KeyboardButton(text="💬 Поддержка")
+            ]
+        ],
+        resize_keyboard=True,
+        is_persistent=True
+    )
+
+
+# =========================================================
+# ГЛАВНОЕ INLINE-МЕНЮ
 # =========================================================
 
 def main_menu():
@@ -188,32 +180,32 @@ def main_menu():
 
     builder.button(
         text="🔐 Мой VPN",
-        callback_data="my_vpn"
+        callback_data="menu_vpn"
     )
 
     builder.button(
         text="💳 Купить подписку",
-        callback_data="buy"
+        callback_data="menu_buy"
     )
 
     builder.button(
         text="📱 Устройства",
-        callback_data="devices"
+        callback_data="menu_devices"
     )
 
     builder.button(
         text="🎁 Пригласить друга",
-        callback_data="referral"
+        callback_data="menu_referral"
     )
 
     builder.button(
         text="💬 Поддержка",
-        callback_data="support"
+        callback_data="menu_support"
     )
 
     builder.button(
         text="ℹ️ О сервисе",
-        callback_data="about"
+        callback_data="menu_about"
     )
 
     builder.adjust(2, 2, 2)
@@ -225,11 +217,11 @@ def main_menu():
 # КНОПКА НАЗАД
 # =========================================================
 
-def back_menu():
+def back_button():
     builder = InlineKeyboardBuilder()
 
     builder.button(
-        text="🏠 Главное меню",
+        text="⬅️ Назад",
         callback_data="main_menu"
     )
 
@@ -237,34 +229,34 @@ def back_menu():
 
 
 # =========================================================
-# МЕНЮ ПОКУПКИ
+# ТАРИФЫ
 # =========================================================
 
-def plans_menu():
+def plans_keyboard():
     builder = InlineKeyboardBuilder()
 
     builder.button(
         text="7 дней — 39 ₽",
-        callback_data="plan:7"
+        callback_data="plan_7"
     )
 
     builder.button(
         text="30 дней — 99 ₽",
-        callback_data="plan:30"
+        callback_data="plan_30"
     )
 
     builder.button(
         text="90 дней — 279 ₽",
-        callback_data="plan:90"
+        callback_data="plan_90"
     )
 
     builder.button(
         text="180 дней — 549 ₽",
-        callback_data="plan:180"
+        callback_data="plan_180"
     )
 
     builder.button(
-        text="⬅️ Назад",
+        text="⬅️ Главное меню",
         callback_data="main_menu"
     )
 
@@ -274,30 +266,52 @@ def plans_menu():
 
 
 # =========================================================
-# ВЫБОР УСТРОЙСТВ
+# УСТРОЙСТВА
 # =========================================================
 
-def devices_menu(days):
+def devices_keyboard(days):
     builder = InlineKeyboardBuilder()
 
     builder.button(
         text="📱 1 устройство",
-        callback_data=f"device:{days}:1"
+        callback_data=f"device_{days}_1"
     )
 
     builder.button(
         text="📱 3 устройства",
-        callback_data=f"device:{days}:3"
+        callback_data=f"device_{days}_3"
     )
 
     builder.button(
         text="📱 5 устройств",
-        callback_data=f"device:{days}:5"
+        callback_data=f"device_{days}_5"
     )
 
     builder.button(
         text="⬅️ Назад",
-        callback_data="buy"
+        callback_data="menu_buy"
+    )
+
+    builder.adjust(1)
+
+    return builder.as_markup()
+
+
+# =========================================================
+# ОПЛАТА
+# =========================================================
+
+def payment_keyboard(days, devices):
+    builder = InlineKeyboardBuilder()
+
+    builder.button(
+        text="✅ Я оплатил",
+        callback_data=f"paid_{days}_{devices}"
+    )
+
+    builder.button(
+        text="⬅️ Назад",
+        callback_data=f"plan_{days}"
     )
 
     builder.adjust(1)
@@ -309,17 +323,17 @@ def devices_menu(days):
 # АДМИНСКИЕ КНОПКИ
 # =========================================================
 
-def admin_payment_keyboard(purchase_id, user_id):
+def admin_keyboard(purchase_id, user_id):
     builder = InlineKeyboardBuilder()
 
     builder.button(
         text="✅ Принять",
-        callback_data=f"accept:{purchase_id}:{user_id}"
+        callback_data=f"accept_{purchase_id}_{user_id}"
     )
 
     builder.button(
         text="❌ Отклонить",
-        callback_data=f"reject:{purchase_id}:{user_id}"
+        callback_data=f"reject_{purchase_id}_{user_id}"
     )
 
     builder.adjust(2)
@@ -328,51 +342,199 @@ def admin_payment_keyboard(purchase_id, user_id):
 
 
 # =========================================================
-# START
+# ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ
 # =========================================================
 
-@dp.message(Command("start"))
-async def start_handler(message: types.Message):
-
-    user = message.from_user
-
-    save_user(user)
-
-    if is_banned(user.id):
-        await message.answer(
-            "❌ Вы заблокированы.\n\n"
-            "Доступ к AuraVPN для вашего аккаунта закрыт."
-        )
-        return
-
-    await message.answer(
-        "✨ <b>Добро пожаловать в AuraVPN!</b>\n\n"
-        "🔐 Быстрый и стабильный VPN\n"
-        "🌍 Доступ к сайтам и сервисам\n"
-        "⚡ Простое подключение\n\n"
-        "Выберите нужный раздел ниже:",
-        parse_mode="HTML",
-        reply_markup=main_menu()
-    )
-
-
-# =========================================================
-# ГЛАВНОЕ МЕНЮ
-# =========================================================
-
-@dp.callback_query(F.data == "main_menu")
-async def main_menu_handler(callback: types.CallbackQuery):
+async def check_user(callback: types.CallbackQuery):
 
     if is_banned(callback.from_user.id):
         await callback.answer(
             "❌ Вы заблокированы.",
             show_alert=True
         )
+        return False
+
+    return True
+
+
+# =========================================================
+# /START
+# =========================================================
+
+@dp.message(Command("start"))
+async def start_handler(message: types.Message):
+
+    if is_banned(message.from_user.id):
+        await message.answer(
+            "❌ Вы заблокированы и не можете пользоваться ботом."
+        )
+        return
+
+    await message.answer(
+        "✨ <b>Добро пожаловать в AuraVPN!</b>\n\n"
+        "🔐 Быстрый и стабильный VPN\n"
+        "🌍 Доступ к нужным сайтам и сервисам\n"
+        "⚡ Простое подключение\n\n"
+        "Выберите нужный раздел:",
+        parse_mode="HTML",
+        reply_markup=bottom_keyboard()
+    )
+
+    await message.answer(
+        "🏠 <b>Главное меню</b>",
+        parse_mode="HTML",
+        reply_markup=main_menu()
+    )
+
+
+# =========================================================
+# НИЖНЯЯ КНОПКА «ГЛАВНОЕ МЕНЮ»
+# =========================================================
+
+@dp.message(F.text == "🏠 Главное меню")
+async def bottom_main_menu(message: types.Message):
+
+    if is_banned(message.from_user.id):
+        await message.answer(
+            "❌ Вы заблокированы."
+        )
+        return
+
+    await message.answer(
+        "🏠 <b>Главное меню</b>\n\n"
+        "Выберите нужный раздел:",
+        parse_mode="HTML",
+        reply_markup=main_menu()
+    )
+
+
+# =========================================================
+# НИЖНЯЯ КНОПКА «КУПИТЬ ПОДПИСКУ»
+# =========================================================
+
+@dp.message(F.text == "💳 Купить подписку")
+async def bottom_buy(message: types.Message):
+
+    if is_banned(message.from_user.id):
+        await message.answer(
+            "❌ Вы заблокированы."
+        )
+        return
+
+    await message.answer(
+        "💳 <b>Выберите срок подписки:</b>",
+        parse_mode="HTML",
+        reply_markup=plans_keyboard()
+    )
+
+
+# =========================================================
+# НИЖНЯЯ КНОПКА «МОЙ VPN»
+# =========================================================
+
+@dp.message(F.text == "🔐 Мой VPN")
+async def bottom_vpn(message: types.Message):
+
+    if is_banned(message.from_user.id):
+        await message.answer(
+            "❌ Вы заблокированы."
+        )
+        return
+
+    await message.answer(
+        "🔐 <b>Мой VPN</b>\n\n"
+        "Активная подписка не найдена.\n\n"
+        "Чтобы получить VPN, приобретите подписку.",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+
+# =========================================================
+# НИЖНЯЯ КНОПКА «УСТРОЙСТВА»
+# =========================================================
+
+@dp.message(F.text == "📱 Устройства")
+async def bottom_devices(message: types.Message):
+
+    if is_banned(message.from_user.id):
+        await message.answer(
+            "❌ Вы заблокированы."
+        )
+        return
+
+    await message.answer(
+        "📱 <b>Устройства</b>\n\n"
+        "Вы можете выбрать количество устройств "
+        "при покупке подписки.",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+
+# =========================================================
+# НИЖНЯЯ КНОПКА «ПРИГЛАСИТЬ ДРУГА»
+# =========================================================
+
+@dp.message(F.text == "🎁 Пригласить друга")
+async def bottom_referral(message: types.Message):
+
+    if is_banned(message.from_user.id):
+        await message.answer(
+            "❌ Вы заблокированы."
+        )
+        return
+
+    me = await bot.get_me()
+
+    link = (
+        f"https://t.me/{me.username}"
+        f"?start=ref_{message.from_user.id}"
+    )
+
+    await message.answer(
+        "🎁 <b>Пригласить друга</b>\n\n"
+        "Ваша реферальная ссылка:\n\n"
+        f"<code>{link}</code>",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+
+# =========================================================
+# НИЖНЯЯ КНОПКА «ПОДДЕРЖКА»
+# =========================================================
+
+@dp.message(F.text == "💬 Поддержка")
+async def bottom_support(message: types.Message):
+
+    if is_banned(message.from_user.id):
+        await message.answer(
+            "❌ Вы заблокированы."
+        )
+        return
+
+    await message.answer(
+        "💬 <b>Поддержка</b>\n\n"
+        "Если у вас возникли проблемы с оплатой "
+        "или подключением, напишите администратору.",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+
+# =========================================================
+# INLINE: ГЛАВНОЕ МЕНЮ
+# =========================================================
+
+@dp.callback_query(F.data == "main_menu")
+async def main_menu_callback(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
         return
 
     await callback.message.edit_text(
-        "✨ <b>AuraVPN</b>\n\n"
-        "🔐 Ваш личный VPN-сервис\n\n"
+        "🏠 <b>Главное меню</b>\n\n"
         "Выберите нужный раздел:",
         parse_mode="HTML",
         reply_markup=main_menu()
@@ -382,112 +544,251 @@ async def main_menu_handler(callback: types.CallbackQuery):
 
 
 # =========================================================
-# МОЙ VPN
+# INLINE: МОЙ VPN
 # =========================================================
 
-@dp.callback_query(F.data == "my_vpn")
-async def my_vpn_handler(callback: types.CallbackQuery):
+@dp.callback_query(F.data == "menu_vpn")
+async def menu_vpn(callback: types.CallbackQuery):
 
-    if is_banned(callback.from_user.id):
-        await callback.answer(
-            "❌ Вы заблокированы.",
-            show_alert=True
-        )
+    if not await check_user(callback):
         return
 
     await callback.message.edit_text(
         "🔐 <b>Мой VPN</b>\n\n"
-        "На данный момент активный VPN-ключ не найден.\n\n"
-        "💳 Чтобы получить доступ, приобретите подписку.",
+        "Активная подписка не найдена.\n\n"
+        "Приобретите подписку, чтобы получить доступ.",
         parse_mode="HTML",
-        reply_markup=back_menu()
+        reply_markup=back_button()
     )
 
     await callback.answer()
 
 
 # =========================================================
-# ПОКУПКА
+# INLINE: ПОКУПКА
 # =========================================================
 
-@dp.callback_query(F.data == "buy")
-async def buy_handler(callback: types.CallbackQuery):
+@dp.callback_query(F.data == "menu_buy")
+async def menu_buy(callback: types.CallbackQuery):
 
-    if is_banned(callback.from_user.id):
-        await callback.answer(
-            "❌ Вы заблокированы.",
-            show_alert=True
-        )
+    if not await check_user(callback):
         return
 
     await callback.message.edit_text(
         "💳 <b>Покупка AuraVPN</b>\n\n"
         "Выберите срок подписки:",
         parse_mode="HTML",
-        reply_markup=plans_menu()
+        reply_markup=plans_keyboard()
     )
 
     await callback.answer()
 
 
 # =========================================================
-# ВЫБОР СРОКА
+# INLINE: УСТРОЙСТВА
 # =========================================================
 
-@dp.callback_query(F.data.startswith("plan:"))
-async def plan_handler(callback: types.CallbackQuery):
+@dp.callback_query(F.data == "menu_devices")
+async def menu_devices(callback: types.CallbackQuery):
 
-    if is_banned(callback.from_user.id):
-        await callback.answer(
-            "❌ Вы заблокированы.",
-            show_alert=True
-        )
+    if not await check_user(callback):
         return
 
-    days = int(callback.data.split(":")[1])
+    await callback.message.edit_text(
+        "📱 <b>Устройства</b>\n\n"
+        "Количество устройств выбирается "
+        "при покупке подписки.",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# INLINE: РЕФЕРАЛКА
+# =========================================================
+
+@dp.callback_query(F.data == "menu_referral")
+async def menu_referral(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
+        return
+
+    me = await bot.get_me()
+
+    link = (
+        f"https://t.me/{me.username}"
+        f"?start=ref_{callback.from_user.id}"
+    )
+
+    await callback.message.edit_text(
+        "🎁 <b>Пригласить друга</b>\n\n"
+        "Ваша реферальная ссылка:\n\n"
+        f"<code>{link}</code>",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# INLINE: ПОДДЕРЖКА
+# =========================================================
+
+@dp.callback_query(F.data == "menu_support")
+async def menu_support(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
+        return
+
+    await callback.message.edit_text(
+        "💬 <b>Поддержка</b>\n\n"
+        "Если у вас возникли проблемы с оплатой "
+        "или подключением, напишите администратору.",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# INLINE: О СЕРВИСЕ
+# =========================================================
+
+@dp.callback_query(F.data == "menu_about")
+async def menu_about(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
+        return
+
+    await callback.message.edit_text(
+        "ℹ️ <b>О AuraVPN</b>\n\n"
+        "🔐 Защита соединения\n"
+        "⚡ Быстрое подключение\n"
+        "🌍 Доступ к нужным ресурсам\n"
+        "📱 Поддержка нескольких устройств",
+        parse_mode="HTML",
+        reply_markup=back_button()
+    )
+
+    await callback.answer()
+
+
+# =========================================================
+# ВЫБОР 7 ДНЕЙ
+# =========================================================
+
+@dp.callback_query(F.data == "plan_7")
+async def plan_7(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
+        return
+
+    await show_devices(callback, 7)
+
+
+# =========================================================
+# ВЫБОР 30 ДНЕЙ
+# =========================================================
+
+@dp.callback_query(F.data == "plan_30")
+async def plan_30(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
+        return
+
+    await show_devices(callback, 30)
+
+
+# =========================================================
+# ВЫБОР 90 ДНЕЙ
+# =========================================================
+
+@dp.callback_query(F.data == "plan_90")
+async def plan_90(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
+        return
+
+    await show_devices(callback, 90)
+
+
+# =========================================================
+# ВЫБОР 180 ДНЕЙ
+# =========================================================
+
+@dp.callback_query(F.data == "plan_180")
+async def plan_180(callback: types.CallbackQuery):
+
+    if not await check_user(callback):
+        return
+
+    await show_devices(callback, 180)
+
+
+# =========================================================
+# ПОКАЗ УСТРОЙСТВ
+# =========================================================
+
+async def show_devices(callback: types.CallbackQuery, days: int):
+
     price = PLANS[days]
 
     await callback.message.edit_text(
         f"💳 <b>Подписка на {days} дней</b>\n\n"
-        f"Стоимость: <b>{price} ₽</b>\n\n"
-        "📱 Теперь выберите количество устройств:",
+        f"💰 Стоимость: <b>{price} ₽</b>\n\n"
+        "📱 Выберите количество устройств:",
         parse_mode="HTML",
-        reply_markup=devices_menu(days)
+        reply_markup=devices_keyboard(days)
     )
 
     await callback.answer()
 
 
 # =========================================================
-# ВЫБОР УСТРОЙСТВ
+# УСТРОЙСТВО 1
 # =========================================================
 
-@dp.callback_query(F.data.startswith("device:"))
+@dp.callback_query(F.data.startswith("device_"))
 async def device_handler(callback: types.CallbackQuery):
 
-    if is_banned(callback.from_user.id):
+    if not await check_user(callback):
+        return
+
+    try:
+        parts = callback.data.split("_")
+
+        days = int(parts[1])
+        devices = int(parts[2])
+
+    except (ValueError, IndexError):
         await callback.answer(
-            "❌ Вы заблокированы.",
+            "Ошибка выбора тарифа.",
             show_alert=True
         )
         return
 
-    parts = callback.data.split(":")
-
-    days = int(parts[1])
-    devices = int(parts[2])
+    if days not in PLANS:
+        await callback.answer(
+            "Неизвестный тариф.",
+            show_alert=True
+        )
+        return
 
     price = PLANS[days]
 
     await callback.message.edit_text(
         "💳 <b>Оплата AuraVPN</b>\n\n"
         f"📅 Срок: <b>{days} дней</b>\n"
-        f"📱 Устройства: <b>{devices}</b>\n"
+        f"📱 Устройств: <b>{devices}</b>\n"
         f"💰 Сумма: <b>{price} ₽</b>\n\n"
         "━━━━━━━━━━━━━━\n\n"
         "💳 <b>Реквизиты для оплаты:</b>\n\n"
         f"<code>{PAYMENT_CARD}</code>\n\n"
-        "После оплаты нажмите кнопку ниже.",
+        "После оплаты нажмите «Я оплатил».",
         parse_mode="HTML",
         reply_markup=payment_keyboard(days, devices)
     )
@@ -496,49 +797,38 @@ async def device_handler(callback: types.CallbackQuery):
 
 
 # =========================================================
-# КНОПКА ОПЛАТЫ
-# =========================================================
-
-def payment_keyboard(days, devices):
-    builder = InlineKeyboardBuilder()
-
-    builder.button(
-        text="✅ Я оплатил",
-        callback_data=f"paid:{days}:{devices}"
-    )
-
-    builder.button(
-        text="⬅️ Назад",
-        callback_data=f"plan:{days}"
-    )
-
-    builder.adjust(1)
-
-    return builder.as_markup()
-
-
-# =========================================================
 # Я ОПЛАТИЛ
 # =========================================================
 
-@dp.callback_query(F.data.startswith("paid:"))
+@dp.callback_query(F.data.startswith("paid_"))
 async def paid_handler(callback: types.CallbackQuery):
 
-    user_id = callback.from_user.id
+    if not await check_user(callback):
+        return
 
-    if is_banned(user_id):
+    try:
+        parts = callback.data.split("_")
+
+        days = int(parts[1])
+        devices = int(parts[2])
+
+    except (ValueError, IndexError):
         await callback.answer(
-            "❌ Вы заблокированы.",
+            "Ошибка данных оплаты.",
             show_alert=True
         )
         return
 
-    parts = callback.data.split(":")
+    amount = PLANS.get(days)
 
-    days = int(parts[1])
-    devices = int(parts[2])
+    if amount is None:
+        await callback.answer(
+            "Ошибка тарифа.",
+            show_alert=True
+        )
+        return
 
-    amount = PLANS[days]
+    user_id = callback.from_user.id
 
     purchase_id = create_purchase(
         user_id,
@@ -549,15 +839,14 @@ async def paid_handler(callback: types.CallbackQuery):
 
     username = callback.from_user.username
 
-    username_text = (
-        f"@{username}"
-        if username
-        else "нет username"
-    )
+    if username:
+        username_text = f"@{username}"
+    else:
+        username_text = "нет username"
 
     admin_text = (
         "💳 <b>НОВАЯ ОПЛАТА</b>\n\n"
-        f"👤 Пользователь: {callback.from_user.first_name}\n"
+        f"👤 Имя: {callback.from_user.first_name}\n"
         f"🔗 Username: {username_text}\n"
         f"🆔 ID: <code>{user_id}</code>\n\n"
         f"📅 Срок: <b>{days} дней</b>\n"
@@ -572,50 +861,57 @@ async def paid_handler(callback: types.CallbackQuery):
             ADMIN_ID,
             admin_text,
             parse_mode="HTML",
-            reply_markup=admin_payment_keyboard(
+            reply_markup=admin_keyboard(
                 purchase_id,
                 user_id
             )
         )
-
     except Exception as e:
         logging.error(
-            f"Ошибка отправки заявки админу: {e}"
+            f"Ошибка отправки админу: {e}"
         )
 
     await callback.message.edit_text(
-        "⏳ <b>Платёж отправлен на проверку.</b>\n\n"
-        "Администратор проверит оплату и подтвердит вашу подписку.\n\n"
+        "⏳ <b>Оплата отправлена на проверку.</b>\n\n"
+        "Администратор проверит оплату.\n\n"
         "Пожалуйста, ожидайте.",
         parse_mode="HTML",
-        reply_markup=back_menu()
+        reply_markup=back_button()
     )
 
     await callback.answer(
-        "Оплата отправлена на проверку ✅"
+        "Заявка отправлена ✅"
     )
 
 
 # =========================================================
-# ПРИНЯТЬ ОПЛАТУ
+# ПРИНЯТЬ
 # =========================================================
 
-@dp.callback_query(F.data.startswith("accept:"))
+@dp.callback_query(F.data.startswith("accept_"))
 async def accept_handler(callback: types.CallbackQuery):
 
     if callback.from_user.id != ADMIN_ID:
         await callback.answer(
-            "❌ У вас нет доступа.",
+            "❌ Нет доступа.",
             show_alert=True
         )
         return
 
-    parts = callback.data.split(":")
+    try:
+        parts = callback.data.split("_")
 
-    purchase_id = int(parts[1])
-    user_id = int(parts[2])
+        purchase_id = int(parts[1])
+        user_id = int(parts[2])
 
-    update_purchase_status(
+    except (ValueError, IndexError):
+        await callback.answer(
+            "Ошибка данных.",
+            show_alert=True
+        )
+        return
+
+    update_purchase(
         purchase_id,
         "accepted"
     )
@@ -624,15 +920,12 @@ async def accept_handler(callback: types.CallbackQuery):
         await bot.send_message(
             user_id,
             "✅ <b>Оплата подтверждена!</b>\n\n"
-            "Ваша подписка AuraVPN активирована.\n\n"
-            "🔐 Откройте раздел «Мой VPN», "
-            "чтобы получить информацию о подключении.",
+            "Ваша подписка AuraVPN активирована.",
             parse_mode="HTML"
         )
-
     except Exception as e:
         logging.error(
-            f"Не удалось уведомить пользователя: {e}"
+            f"Ошибка отправки пользователю: {e}"
         )
 
     try:
@@ -643,7 +936,6 @@ async def accept_handler(callback: types.CallbackQuery):
             "✅ <b>ОПЛАТА ПРИНЯТА</b>",
             parse_mode="HTML"
         )
-
     except Exception:
         pass
 
@@ -653,59 +945,61 @@ async def accept_handler(callback: types.CallbackQuery):
 
 
 # =========================================================
-# ОТКЛОНИТЬ = ЗАБЛОКИРОВАТЬ
+# ОТКЛОНИТЬ + БЛОКИРОВКА
 # =========================================================
 
-@dp.callback_query(F.data.startswith("reject:"))
+@dp.callback_query(F.data.startswith("reject_"))
 async def reject_handler(callback: types.CallbackQuery):
 
     if callback.from_user.id != ADMIN_ID:
         await callback.answer(
-            "❌ У вас нет доступа.",
+            "❌ Нет доступа.",
             show_alert=True
         )
         return
 
-    parts = callback.data.split(":")
+    try:
+        parts = callback.data.split("_")
 
-    purchase_id = int(parts[1])
-    user_id = int(parts[2])
+        purchase_id = int(parts[1])
+        user_id = int(parts[2])
 
-    # Меняем статус покупки
-    update_purchase_status(
+    except (ValueError, IndexError):
+        await callback.answer(
+            "Ошибка данных.",
+            show_alert=True
+        )
+        return
+
+    update_purchase(
         purchase_id,
         "rejected"
     )
 
-    # Блокируем пользователя навсегда
     ban_user(user_id)
 
-    # Сообщаем пользователю
     try:
         await bot.send_message(
             user_id,
             "❌ <b>Ваша заявка отклонена.</b>\n\n"
-            "Доступ к AuraVPN для вашего аккаунта "
-            "заблокирован.",
+            "Вы были заблокированы и больше "
+            "не можете пользоваться ботом.",
             parse_mode="HTML"
         )
-
     except Exception as e:
         logging.error(
-            f"Не удалось уведомить пользователя: {e}"
+            f"Ошибка отправки пользователю: {e}"
         )
 
-    # Убираем кнопки и показываем статус админу
     try:
         await callback.message.edit_text(
             callback.message.text
             + "\n\n"
             "━━━━━━━━━━━━━━\n"
-            "❌ <b>ОПЛАТА ОТКЛОНЕНА</b>\n"
+            "❌ <b>ОТКЛОНЕНО</b>\n"
             "🚫 <b>ПОЛЬЗОВАТЕЛЬ ЗАБЛОКИРОВАН</b>",
             parse_mode="HTML"
         )
-
     except Exception:
         pass
 
@@ -715,145 +1009,21 @@ async def reject_handler(callback: types.CallbackQuery):
 
 
 # =========================================================
-# УСТРОЙСТВА
-# =========================================================
-
-@dp.callback_query(F.data == "devices")
-async def devices_handler(callback: types.CallbackQuery):
-
-    if is_banned(callback.from_user.id):
-        await callback.answer(
-            "❌ Вы заблокированы.",
-            show_alert=True
-        )
-        return
-
-    await callback.message.edit_text(
-        "📱 <b>Устройства</b>\n\n"
-        "AuraVPN можно использовать на разных устройствах.\n\n"
-        "Выберите подходящий тариф при покупке "
-        "подписки.",
-        parse_mode="HTML",
-        reply_markup=back_menu()
-    )
-
-    await callback.answer()
-
-
-# =========================================================
-# РЕФЕРАЛЬНАЯ СИСТЕМА
-# =========================================================
-
-@dp.callback_query(F.data == "referral")
-async def referral_handler(callback: types.CallbackQuery):
-
-    if is_banned(callback.from_user.id):
-        await callback.answer(
-            "❌ Вы заблокированы.",
-            show_alert=True
-        )
-        return
-
-    bot_info = await bot.get_me()
-
-    referral_link = (
-        f"https://t.me/{bot_info.username}"
-        f"?start=ref_{callback.from_user.id}"
-    )
-
-    await callback.message.edit_text(
-        "🎁 <b>Пригласить друга</b>\n\n"
-        "Приглашайте друзей в AuraVPN "
-        "по своей ссылке.\n\n"
-        "🔗 Ваша ссылка:\n"
-        f"<code>{referral_link}</code>",
-        parse_mode="HTML",
-        reply_markup=back_menu()
-    )
-
-    await callback.answer()
-
-
-# =========================================================
-# ПОДДЕРЖКА
-# =========================================================
-
-@dp.callback_query(F.data == "support")
-async def support_handler(callback: types.CallbackQuery):
-
-    if is_banned(callback.from_user.id):
-        await callback.answer(
-            "❌ Вы заблокированы.",
-            show_alert=True
-        )
-        return
-
-    await callback.message.edit_text(
-        "💬 <b>Поддержка AuraVPN</b>\n\n"
-        "Если у вас возникли проблемы с оплатой "
-        "или подключением, обратитесь к администратору.\n\n"
-        "После обращения укажите свой Telegram ID.",
-        parse_mode="HTML",
-        reply_markup=back_menu()
-    )
-
-    await callback.answer()
-
-
-# =========================================================
-# О СЕРВИСЕ
-# =========================================================
-
-@dp.callback_query(F.data == "about")
-async def about_handler(callback: types.CallbackQuery):
-
-    if is_banned(callback.from_user.id):
-        await callback.answer(
-            "❌ Вы заблокированы.",
-            show_alert=True
-        )
-        return
-
-    await callback.message.edit_text(
-        "ℹ️ <b>О AuraVPN</b>\n\n"
-        "AuraVPN — сервис для безопасного "
-        "и удобного доступа к интернету.\n\n"
-        "🔐 Защита соединения\n"
-        "⚡ Быстрое подключение\n"
-        "🌍 Доступ к нужным ресурсам\n"
-        "📱 Поддержка нескольких устройств",
-        parse_mode="HTML",
-        reply_markup=back_menu()
-    )
-
-    await callback.answer()
-
-
-# =========================================================
-# ОБЫЧНЫЕ СООБЩЕНИЯ
+# ЛЮБЫЕ ДРУГИЕ СООБЩЕНИЯ
 # =========================================================
 
 @dp.message()
-async def all_messages_handler(message: types.Message):
+async def other_messages(message: types.Message):
 
-    user_id = message.from_user.id
-
-    save_user(message.from_user)
-
-    if is_banned(user_id):
+    if is_banned(message.from_user.id):
         await message.answer(
-            "❌ Вы заблокированы и не можете "
-            "пользоваться этим ботом."
+            "❌ Вы заблокированы."
         )
         return
 
-    # Администраторские сообщения не обрабатываем
-    if user_id == ADMIN_ID:
-        return
-
     await message.answer(
-        "🏠 Используйте кнопки меню ниже:",
-        reply_markup=main_menu()
+        "🏠 Используйте меню бота:",
+        reply_markup=bottom_keyboard()
     )
 
 
@@ -873,7 +1043,7 @@ async def main():
         )
     except Exception as e:
         logging.warning(
-            f"Webhook: {e}"
+            f"Ошибка удаления webhook: {e}"
         )
 
     logging.info("AuraVPN запущен!")
@@ -886,7 +1056,12 @@ async def main():
 # =========================================================
 
 if __name__ == "__main__":
+
     try:
         asyncio.run(main())
+
     except KeyboardInterrupt:
-        logging.info("Бот остановлен.")
+
+        logging.info(
+            "AuraVPN остановлен."
+        )
