@@ -1,3 +1,4 @@
+```python
 import os
 import asyncio
 import logging
@@ -304,6 +305,15 @@ def devices_keyboard(days):
 def payment_keyboard(days, devices):
     builder = InlineKeyboardBuilder()
 
+    # Кнопка с номером карты.
+    # При нажатии Telegram копирует текст кнопки.
+    builder.button(
+        text=f"💳 {PAYMENT_CARD}",
+        copy_text=types.CopyTextButton(
+            text=PAYMENT_CARD
+        )
+    )
+
     builder.button(
         text="✅ Я оплатил",
         callback_data=f"paid_{days}_{devices}"
@@ -370,20 +380,21 @@ async def start_handler(message: types.Message):
         )
         return
 
+    # Теперь приветствие + главное меню = ОДНО сообщение
     await message.answer(
         "✨ <b>Добро пожаловать в AuraVPN!</b>\n\n"
         "🔐 Быстрый и стабильный VPN\n"
         "🌍 Доступ к нужным сайтам и сервисам\n"
         "⚡ Простое подключение\n\n"
-        "Выберите нужный раздел:",
-        parse_mode="HTML",
-        reply_markup=bottom_keyboard()
-    )
-
-    await message.answer(
-        "🏠 <b>Главное меню</b>",
+        "<b>Выберите нужный раздел:</b>",
         parse_mode="HTML",
         reply_markup=main_menu()
+    )
+
+    # Нижняя панель показывается отдельно как клавиатура
+    await message.answer(
+        "👇 Используйте нижнюю панель для быстрого доступа.",
+        reply_markup=bottom_keyboard()
     )
 
 
@@ -401,8 +412,11 @@ async def bottom_main_menu(message: types.Message):
         return
 
     await message.answer(
-        "🏠 <b>Главное меню</b>\n\n"
-        "Выберите нужный раздел:",
+        "✨ <b>Добро пожаловать в AuraVPN!</b>\n\n"
+        "🔐 Быстрый и стабильный VPN\n"
+        "🌍 Доступ к нужным сайтам и сервисам\n"
+        "⚡ Простое подключение\n\n"
+        "<b>Выберите нужный раздел:</b>",
         parse_mode="HTML",
         reply_markup=main_menu()
     )
@@ -534,8 +548,11 @@ async def main_menu_callback(callback: types.CallbackQuery):
         return
 
     await callback.message.edit_text(
-        "🏠 <b>Главное меню</b>\n\n"
-        "Выберите нужный раздел:",
+        "✨ <b>Добро пожаловать в AuraVPN!</b>\n\n"
+        "🔐 Быстрый и стабильный VPN\n"
+        "🌍 Доступ к нужным сайтам и сервисам\n"
+        "⚡ Простое подключение\n\n"
+        "<b>Выберите нужный раздел:</b>",
         parse_mode="HTML",
         reply_markup=main_menu()
     )
@@ -678,54 +695,34 @@ async def menu_about(callback: types.CallbackQuery):
 
 
 # =========================================================
-# ВЫБОР 7 ДНЕЙ
+# ВЫБОР ТАРИФОВ
 # =========================================================
 
 @dp.callback_query(F.data == "plan_7")
 async def plan_7(callback: types.CallbackQuery):
-
     if not await check_user(callback):
         return
-
     await show_devices(callback, 7)
 
 
-# =========================================================
-# ВЫБОР 30 ДНЕЙ
-# =========================================================
-
 @dp.callback_query(F.data == "plan_30")
 async def plan_30(callback: types.CallbackQuery):
-
     if not await check_user(callback):
         return
-
     await show_devices(callback, 30)
 
 
-# =========================================================
-# ВЫБОР 90 ДНЕЙ
-# =========================================================
-
 @dp.callback_query(F.data == "plan_90")
 async def plan_90(callback: types.CallbackQuery):
-
     if not await check_user(callback):
         return
-
     await show_devices(callback, 90)
 
 
-# =========================================================
-# ВЫБОР 180 ДНЕЙ
-# =========================================================
-
 @dp.callback_query(F.data == "plan_180")
 async def plan_180(callback: types.CallbackQuery):
-
     if not await check_user(callback):
         return
-
     await show_devices(callback, 180)
 
 
@@ -749,7 +746,7 @@ async def show_devices(callback: types.CallbackQuery, days: int):
 
 
 # =========================================================
-# УСТРОЙСТВО 1
+# ВЫБОР УСТРОЙСТВА
 # =========================================================
 
 @dp.callback_query(F.data.startswith("device_"))
@@ -787,6 +784,7 @@ async def device_handler(callback: types.CallbackQuery):
         f"💰 Сумма: <b>{price} ₽</b>\n\n"
         "━━━━━━━━━━━━━━\n\n"
         "💳 <b>Реквизиты для оплаты:</b>\n\n"
+        "👇 <b>Нажмите на номер карты, чтобы скопировать:</b>\n\n"
         f"<code>{PAYMENT_CARD}</code>\n\n"
         "После оплаты нажмите «Я оплатил».",
         parse_mode="HTML",
@@ -1065,3 +1063,4 @@ if __name__ == "__main__":
         logging.info(
             "AuraVPN остановлен."
         )
+```
