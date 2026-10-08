@@ -175,6 +175,29 @@ def welcome_text():
     )
 
 
+def about_text():
+    return (
+        "ℹ️ <b>О сервисе AuraVPN</b>\n\n"
+        "<b>AuraVPN</b> — это ваш надежный инструмент для безопасного, анонимного и свободного интернета.\n\n"
+        "🚀 <b>Наши преимущества:</b>\n"
+        "• <b>Высокая скорость</b> — комфортный просмотр видео, игры и работа без задержек.\n"
+        "• <b>Стабильность</b> — современные протоколы подключения, которые не подводят.\n"
+        "• <b>Безопасность</b> — надежное шифрование данных и полная конфиденциальность.\n"
+        "• <b>Удобство</b> — легкая настройка на любых устройствах за пару кликов.\n\n"
+        "Остались вопросы? Обратитесь в раздел поддержки!"
+    )
+
+
+def support_text():
+    return (
+        "💬 <b>Служба поддержки AuraVPN</b>\n\n"
+        "Столкнулись с трудностями при оплате, настройке или подключении VPN?\n\n"
+        "✍️ <b>Как с нами связаться:</b>\n"
+        "Напишите ваш вопрос или суть проблемы ответным сообщением (или обратитесь напрямую к администратору). Пожалуйста, укажите ваш <b>ID</b> и приложите скриншот, если это необходимо.\n\n"
+        "Мы постараемся помочь вам в самое ближайшее время!"
+    )
+
+
 def back_button():
     builder = InlineKeyboardBuilder()
     builder.button(text="⬅️ Главное меню", callback_data="main_menu")
@@ -315,7 +338,7 @@ async def bottom_support(message: types.Message):
     if is_banned(message.from_user.id):
         await message.answer("❌ Вы заблокированы.")
         return
-    await message.answer("💬 <b>Поддержка</b>\n\nНапишите администратору.", parse_mode="HTML", reply_markup=back_button())
+    await message.answer(support_text(), parse_mode="HTML", reply_markup=back_button())
 
 
 @dp.callback_query(F.data == "main_menu")
@@ -364,7 +387,7 @@ async def menu_referral(callback: types.CallbackQuery):
 async def menu_support(callback: types.CallbackQuery):
     if not await check_user(callback):
         return
-    await callback.message.edit_text("💬 <b>Поддержка</b>\n\nНапишите администратору.", parse_mode="HTML", reply_markup=back_button())
+    await callback.message.edit_text(support_text(), parse_mode="HTML", reply_markup=back_button())
     await callback.answer()
 
 
@@ -372,7 +395,7 @@ async def menu_support(callback: types.CallbackQuery):
 async def menu_about(callback: types.CallbackQuery):
     if not await check_user(callback):
         return
-    await callback.message.edit_text("ℹ️ <b>О AuraVPN</b>\n\nБыстрый и безопасный VPN.", parse_mode="HTML", reply_markup=back_button())
+    await callback.message.edit_text(about_text(), parse_mode="HTML", reply_markup=back_button())
     await callback.answer()
 
 
