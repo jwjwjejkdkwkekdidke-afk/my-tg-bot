@@ -276,7 +276,6 @@ def main_menu():
         callback_data="menu_about"
     )
 
-    # Кнопка для скрытия нижней панели
     builder.button(
         text="🔽 Скрыть панель",
         callback_data="hide_panel"
@@ -477,7 +476,6 @@ async def start_handler(
         )
         return
 
-    # Приветствие сразу с главным инлайн-меню (без лишнего текста и навязывания панели)
     await message.answer(
         welcome_text(),
         parse_mode="HTML",
@@ -498,7 +496,6 @@ async def hide_panel_handler(
     if not await check_user(callback):
         return
 
-    # Убираем нижнюю панель у пользователя
     await callback.message.answer(
         "🔽 Нижняя панель свернута.",
         reply_markup=ReplyKeyboardRemove()
@@ -535,7 +532,6 @@ async def show_panel_handler(
     if not await check_user(callback):
         return
 
-    # Возвращаем нижнюю панель
     await callback.message.answer(
         "📱 Нижняя панель снова активирована:",
         reply_markup=bottom_keyboard()
@@ -613,70 +609,3 @@ async def bottom_buy(
 @dp.message(
     F.text == "🔐 Мой VPN"
 )
-async def bottom_vpn(
-    message: types.Message
-):
-    if is_banned(
-        message.from_user.id
-    ):
-        await message.answer(
-            "❌ Вы заблокированы."
-        )
-        return
-
-    await message.answer(
-        "🔐 <b>Мой VPN</b>\n\n"
-        "Активная подписка не найдена.\n\n"
-        "Чтобы получить VPN, "
-        "приобретите подписку.",
-        parse_mode="HTML",
-        reply_markup=back_button()
-    )
-
-
-# =========================================================
-# НИЖНЯЯ КНОПКА — УСТРОЙСТВА
-# =========================================================
-
-@dp.message(
-    F.text == "📱 Устройства"
-)
-async def bottom_devices(
-    message: types.Message
-):
-    if is_banned(
-        message.from_user.id
-    ):
-        await message.answer(
-            "❌ Вы заблокированы."
-        )
-        return
-
-    await message.answer(
-        "📱 <b>Устройства</b>\n\n"
-        "Количество устройств "
-        "выбирается при покупке подписки.",
-        parse_mode="HTML",
-        reply_markup=back_button()
-    )
-
-
-# =========================================================
-# НИЖНЯЯ КНОПКА — РЕФЕРАЛКА
-# =========================================================
-
-@dp.message(
-    F.text == "🎁 Пригласить друга"
-)
-async def bottom_referral(
-    message: types.Message
-):
-    if is_banned(
-        message.from_user.id
-    ):
-        await message.answer(
-            "❌ Вы заблокированы."
-        )
-        return
-
-    me =
