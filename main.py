@@ -341,4 +341,340 @@ async def bottom_devices(message: types.Message):
 
 @dp.message(F.text == "🎁 Пригласить друга")
 async def bottom_referral(message: types.Message):
-    if is_banned
+    if is_banned(message.from_user.id):
+        await message.answer("❌ Вы заблокированы.")
+        return
+    me = await bot.get_me()
+    link = f"https://t.me/{me.username}?start=ref_{message.from_user.id}"
+    photo = FSInputFile("welcome.png")[cite: 1]
+    await message.answer_photo(photo=photo, caption=f"🎁 <b>Пригласить друга</b>\n\nВаша ссылка:\n<code>{link}</code>", parse_mode="HTML", reply_markup=back_button())
+
+
+@dp.message(F.text == "💬 Поддержка")
+async def bottom_support(message: types.Message):
+    if is_banned(message.from_user.id):
+        await message.answer("❌ Вы заблокированы.")
+        return
+    photo = FSInputFile("support.png")[cite: 1]
+    await message.answer_photo(photo=photo, caption=support_text(), parse_mode="HTML", reply_markup=back_button())
+
+
+@dp.callback_query(F.data == "main_menu")
+async def main_menu_callback(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("welcome.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption=welcome_text(), parse_mode="HTML", reply_markup=main_menu())
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "menu_vpn")
+async def menu_vpn(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("about.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption="🔐 <b>Мой VPN</b>\n\nАктивная подписка не найдена.", parse_mode="HTML", reply_markup=back_button())
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "menu_buy")
+async def menu_buy(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("subscribe.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption="💳 <b>Покупка AuraVPN</b>\n\nВыберите срок подписки:", parse_mode="HTML", reply_markup=plans_keyboard())
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "menu_devices")
+async def menu_devices(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("about.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption="📱 <b>Устройства</b>\n\nВыбираются при покупке.", parse_mode="HTML", reply_markup=back_button())
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "menu_referral")
+async def menu_referral(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    me = await bot.get_me()
+    link = f"https://t.me/{me.username}?start=ref_{callback.from_user.id}"
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("welcome.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption=f"🎁 <b>Пригласить друга</b>\n\n<code>{link}</code>", parse_mode="HTML", reply_markup=back_button())
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "menu_support")
+async def menu_support(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("support.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption=support_text(), parse_mode="HTML", reply_markup=back_button())
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "menu_about")
+async def menu_about(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("about.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption=about_text(), parse_mode="HTML", reply_markup=back_button())
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "plan_7")
+async def plan_7(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    await show_devices(callback, 7)
+
+
+@dp.callback_query(F.data == "plan_30")
+async def plan_30(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    await show_devices(callback, 30)
+
+
+@dp.callback_query(F.data == "plan_90")
+async def plan_90(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    await show_devices(callback, 90)
+
+
+@dp.callback_query(F.data == "plan_180")
+async def plan_180(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+    await show_devices(callback, 180)
+
+
+async def show_devices(callback: types.CallbackQuery, days: int):
+    price = PLANS[days]
+    text = f"💳 <b>Подписка на {days} дней</b>\n\n💰 Базовая цена: <b>{price} ₽</b>\n\n📱 Выберите количество устройств:"
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("subscribe.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption=text, parse_mode="HTML", reply_markup=devices_keyboard(days))
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("device_"))
+async def device_handler(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+
+    try:
+        parts = callback.data.split("_")
+        days = int(parts[1])
+        devices = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("Ошибка выбора тарифа.", show_alert=True)
+        return
+
+    if days not in PLANS or devices not in DEVICE_MULTIPLIERS:
+        await callback.answer("Неизвестный тариф.", show_alert=True)
+        return
+
+    multiplier = DEVICE_MULTIPLIERS[devices]
+    price = int(PLANS[days] * multiplier)
+
+    text = (
+        "💳 <b>Оплата AuraVPN</b>\n\n"
+        f"📅 Срок: <b>{days} дней</b>\n"
+        f"📱 Устройств: <b>{devices}</b>\n"
+        f"💰 Сумма: <b>{price} ₽</b>\n\n"
+        "━━━━━━━━━━━━━━\n\n"
+        "💳 <b>Реквизиты:</b>\n"
+        f"<code>{PAYMENT_CARD}</code>\n\n"
+        "После перевода нажмите кнопку <b>«✅ Я оплатил»</b>."
+    )
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("subscribe.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption=text, parse_mode="HTML", reply_markup=payment_keyboard(days, devices))
+    await callback.answer()
+
+
+@dp.callback_query(F.data.startswith("paid_"))
+async def paid_handler(callback: types.CallbackQuery):
+    if not await check_user(callback):
+        return
+
+    try:
+        parts = callback.data.split("_")
+        days = int(parts[1])
+        devices = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("Ошибка данных.", show_alert=True)
+        return
+
+    base_price = PLANS.get(days)
+    multiplier = DEVICE_MULTIPLIERS.get(devices)
+    if base_price is None or multiplier is None:
+        await callback.answer("Ошибка тарифа.", show_alert=True)
+        return
+
+    amount = int(base_price * multiplier)
+    user_id = callback.from_user.id
+    purchase_id = create_purchase(user_id, days, devices, amount)
+
+    username = f"@{callback.from_user.username}" if callback.from_user.username else "нет username"
+
+    admin_text = (
+        "💳 <b>НОВАЯ ЗАЯВКА</b>\n\n"
+        f"👤 Имя: {callback.from_user.first_name}\n"
+        f"🔗 Username: {username}\n"
+        f"🆔 ID: <code>{user_id}</code>\n\n"
+        f"📅 Срок: <b>{days} дней</b>\n"
+        f"📱 Устройств: <b>{devices}</b>\n"
+        f"💰 Сумма: <b>{amount} ₽</b>\n\n"
+        f"🧾 Заявка № <code>{purchase_id}</code>"
+    )
+
+    try:
+        await bot.send_message(ADMIN_ID, admin_text, parse_mode="HTML", reply_markup=admin_keyboard(purchase_id, user_id))
+    except Exception as e:
+        logging.error(f"Ошибка отправки админу: {e}")
+
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    photo = FSInputFile("welcome.png")[cite: 1]
+    await callback.message.answer_photo(photo=photo, caption="⏳ <b>Оплата отправлена на проверку.</b> Ожидайте.", parse_mode="HTML", reply_markup=back_button())
+    await callback.answer("Заявка отправлена ✅")
+
+
+@dp.callback_query(F.data.startswith("accept_"))
+async def accept_handler(callback: types.CallbackQuery):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("❌ Нет доступа.", show_alert=True)
+        return
+
+    try:
+        parts = callback.data.split("_")
+        purchase_id = int(parts[1])
+        user_id = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("Ошибка.", show_alert=True)
+        return
+
+    if get_purchase_status(purchase_id) != "pending":
+        await callback.answer("Заявка уже обработана.", show_alert=True)
+        return
+
+    update_purchase(purchase_id, "accepted")
+
+    try:
+        await bot.send_message(user_id, "✅ <b>Оплата подтверждена!</b> Подписка активирована.", parse_mode="HTML")
+    except Exception as e:
+        logging.error(f"Ошибка уведомления: {e}")
+
+    try:
+        await callback.message.edit_caption(caption=callback.message.caption + "\n\n✅ <b>ПРИНЯТО</b>", parse_mode="HTML")
+    except Exception as e:
+        logging.error(f"Ошибка правки сообщения: {e}")
+
+    await callback.answer("Принято ✅")
+
+
+@dp.callback_query(F.data.startswith("reject_"))
+async def reject_handler(callback: types.CallbackQuery):
+    if callback.from_user.id != ADMIN_ID:
+        await callback.answer("❌ Нет доступа.", show_alert=True)
+        return
+
+    try:
+        parts = callback.data.split("_")
+        purchase_id = int(parts[1])
+        user_id = int(parts[2])
+    except (ValueError, IndexError):
+        await callback.answer("Ошибка.", show_alert=True)
+        return
+
+    if get_purchase_status(purchase_id) != "pending":
+        await callback.answer("Заявка уже обработана.", show_alert=True)
+        return
+
+    update_purchase(purchase_id, "rejected")
+    ban_user(user_id)
+
+    try:
+        await bot.send_message(user_id, "❌ <b>Заявка отклонена.</b> Вы заблокированы.", parse_mode="HTML")
+    except Exception as e:
+        logging.error(f"Ошибка уведомления: {e}")
+
+    try:
+        await callback.message.edit_caption(caption=callback.message.caption + "\n\n❌ <b>ОТКЛОНЕНО И ЗАБЛОКИРОВАНО</b>", parse_mode="HTML")
+    except Exception as e:
+        logging.error(f"Ошибка правки сообщения: {e}")
+
+    await callback.answer("Пользователь заблокирован ❌")
+
+
+@dp.message()
+async def other_messages(message: types.Message):
+    if is_banned(message.from_user.id):
+        await message.answer("❌ Вы заблокированы.")
+        return
+    await message.answer("🏠 Используйте меню бота:", reply_markup=bottom_keyboard())
+    photo = FSInputFile("welcome.png")[cite: 1]
+    await message.answer_photo(photo=photo, caption=welcome_text(), parse_mode="HTML", reply_markup=main_menu())
+
+
+# =========================================================
+# ЗАПУСК
+# =========================================================
+
+async def main():
+    init_db()
+    logging.info("AuraVPN запускается...")
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+    except Exception as e:
+        logging.warning(f"Ошибка webhook: {e}")
+    logging.info("AuraVPN успешно запущен!")
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info("AuraVPN остановлен.")
