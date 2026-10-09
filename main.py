@@ -258,7 +258,7 @@ async def start_handler(message: types.Message):
     if is_banned(message.from_user.id):
         await message.answer("❌ Вы заблокированы и не можете пользоваться ботом.")
         return
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await message.answer_photo(photo=photo, caption=welcome_text(), parse_mode="HTML", reply_markup=main_menu())
 
 
@@ -282,7 +282,7 @@ async def hide_panel_handler(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await callback.message.answer_photo(photo=photo, caption=text, parse_mode="HTML", reply_markup=builder.as_markup())
     await callback.answer("Панель скрыта ✅")
 
@@ -297,7 +297,7 @@ async def show_panel_handler(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await callback.message.answer_photo(photo=photo, caption=welcome_text(), parse_mode="HTML", reply_markup=main_menu())
     await callback.answer("Панель возвращена ✅")
 
@@ -308,7 +308,7 @@ async def bottom_main_menu(message: types.Message):
         await message.answer("❌ Вы заблокированы.")
         return
     await message.answer("🏠 Главное меню:", reply_markup=bottom_keyboard())
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await message.answer_photo(photo=photo, caption=welcome_text(), parse_mode="HTML", reply_markup=main_menu())
 
 
@@ -317,7 +317,7 @@ async def bottom_buy(message: types.Message):
     if is_banned(message.from_user.id):
         await message.answer("❌ Вы заблокированы.")
         return
-    photo = FSInputFile("subscribe.png")[cite: 1]
+    photo = FSInputFile("subscribe.png")
     await message.answer_photo(photo=photo, caption="💳 <b>Покупка AuraVPN</b>\n\nВыберите срок подписки:", parse_mode="HTML", reply_markup=plans_keyboard())
 
 
@@ -326,7 +326,7 @@ async def bottom_vpn(message: types.Message):
     if is_banned(message.from_user.id):
         await message.answer("❌ Вы заблокированы.")
         return
-    photo = FSInputFile("about.png")[cite: 1]
+    photo = FSInputFile("about.png")
     await message.answer_photo(photo=photo, caption="🔐 <b>Мой VPN</b>\n\nАктивная подписка не найдена.", parse_mode="HTML", reply_markup=back_button())
 
 
@@ -335,7 +335,7 @@ async def bottom_devices(message: types.Message):
     if is_banned(message.from_user.id):
         await message.answer("❌ Вы заблокированы.")
         return
-    photo = FSInputFile("about.png")[cite: 1]
+    photo = FSInputFile("about.png")
     await message.answer_photo(photo=photo, caption="📱 <b>Устройства</b>\n\nКоличество устройств выбирается при покупке.", parse_mode="HTML", reply_markup=back_button())
 
 
@@ -346,7 +346,7 @@ async def bottom_referral(message: types.Message):
         return
     me = await bot.get_me()
     link = f"https://t.me/{me.username}?start=ref_{message.from_user.id}"
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await message.answer_photo(photo=photo, caption=f"🎁 <b>Пригласить друга</b>\n\nВаша ссылка:\n<code>{link}</code>", parse_mode="HTML", reply_markup=back_button())
 
 
@@ -355,7 +355,7 @@ async def bottom_support(message: types.Message):
     if is_banned(message.from_user.id):
         await message.answer("❌ Вы заблокированы.")
         return
-    photo = FSInputFile("support.png")[cite: 1]
+    photo = FSInputFile("support.png")
     await message.answer_photo(photo=photo, caption=support_text(), parse_mode="HTML", reply_markup=back_button())
 
 
@@ -367,7 +367,7 @@ async def main_menu_callback(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await callback.message.answer_photo(photo=photo, caption=welcome_text(), parse_mode="HTML", reply_markup=main_menu())
     await callback.answer()
 
@@ -380,7 +380,7 @@ async def menu_vpn(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("about.png")[cite: 1]
+    photo = FSInputFile("about.png")
     await callback.message.answer_photo(photo=photo, caption="🔐 <b>Мой VPN</b>\n\nАктивная подписка не найдена.", parse_mode="HTML", reply_markup=back_button())
     await callback.answer()
 
@@ -393,7 +393,7 @@ async def menu_buy(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("subscribe.png")[cite: 1]
+    photo = FSInputFile("subscribe.png")
     await callback.message.answer_photo(photo=photo, caption="💳 <b>Покупка AuraVPN</b>\n\nВыберите срок подписки:", parse_mode="HTML", reply_markup=plans_keyboard())
     await callback.answer()
 
@@ -406,7 +406,7 @@ async def menu_devices(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("about.png")[cite: 1]
+    photo = FSInputFile("about.png")
     await callback.message.answer_photo(photo=photo, caption="📱 <b>Устройства</b>\n\nВыбираются при покупке.", parse_mode="HTML", reply_markup=back_button())
     await callback.answer()
 
@@ -421,7 +421,7 @@ async def menu_referral(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await callback.message.answer_photo(photo=photo, caption=f"🎁 <b>Пригласить друга</b>\n\n<code>{link}</code>", parse_mode="HTML", reply_markup=back_button())
     await callback.answer()
 
@@ -434,7 +434,7 @@ async def menu_support(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("support.png")[cite: 1]
+    photo = FSInputFile("support.png")
     await callback.message.answer_photo(photo=photo, caption=support_text(), parse_mode="HTML", reply_markup=back_button())
     await callback.answer()
 
@@ -447,7 +447,7 @@ async def menu_about(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("about.png")[cite: 1]
+    photo = FSInputFile("about.png")
     await callback.message.answer_photo(photo=photo, caption=about_text(), parse_mode="HTML", reply_markup=back_button())
     await callback.answer()
 
@@ -487,7 +487,7 @@ async def show_devices(callback: types.CallbackQuery, days: int):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("subscribe.png")[cite: 1]
+    photo = FSInputFile("subscribe.png")
     await callback.message.answer_photo(photo=photo, caption=text, parse_mode="HTML", reply_markup=devices_keyboard(days))
     await callback.answer()
 
@@ -526,7 +526,7 @@ async def device_handler(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("subscribe.png")[cite: 1]
+    photo = FSInputFile("subscribe.png")
     await callback.message.answer_photo(photo=photo, caption=text, parse_mode="HTML", reply_markup=payment_keyboard(days, devices))
     await callback.answer()
 
@@ -576,7 +576,7 @@ async def paid_handler(callback: types.CallbackQuery):
         await callback.message.delete()
     except Exception:
         pass
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await callback.message.answer_photo(photo=photo, caption="⏳ <b>Оплата отправлена на проверку.</b> Ожидайте.", parse_mode="HTML", reply_markup=back_button())
     await callback.answer("Заявка отправлена ✅")
 
@@ -654,7 +654,7 @@ async def other_messages(message: types.Message):
         await message.answer("❌ Вы заблокированы.")
         return
     await message.answer("🏠 Используйте меню бота:", reply_markup=bottom_keyboard())
-    photo = FSInputFile("welcome.png")[cite: 1]
+    photo = FSInputFile("welcome.png")
     await message.answer_photo(photo=photo, caption=welcome_text(), parse_mode="HTML", reply_markup=main_menu())
 
 
@@ -669,12 +669,4 @@ async def main():
         await bot.delete_webhook(drop_pending_updates=True)
     except Exception as e:
         logging.warning(f"Ошибка webhook: {e}")
-    logging.info("AuraVPN успешно запущен!")
-    await dp.start_polling(bot)
-
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logging.info("AuraVPN остановлен.")
+    logging.info("AuraVPN успешно запущен
