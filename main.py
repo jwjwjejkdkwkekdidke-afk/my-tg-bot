@@ -160,7 +160,7 @@ def main_menu():
     builder.button(text="🎁 Пригласить друга", callback_data="menu_referral")
     builder.button(text="💬 Поддержка", callback_data="menu_support")
     builder.button(text="ℹ️ О сервисе", callback_data="menu_about")
-    builder.button(text="🔽 Скрыть панель", callback_data="hide_panel")
+    builder.button(text="🔽 Открыть панель", callback_data="hide_panel")
     builder.adjust(2, 2, 2, 1)
     return builder.as_markup()
 
@@ -268,7 +268,7 @@ async def hide_panel_handler(callback: types.CallbackQuery):
     await callback.message.answer("🔽 Нижняя панель свернута.", reply_markup=ReplyKeyboardRemove())
 
     builder = InlineKeyboardBuilder()
-    builder.button(text="📱 Показать панель", callback_data="show_panel")
+    builder.button(text="📱 Открыть панель", callback_data="show_panel")
     builder.button(text="⬅️ Главное меню", callback_data="main_menu")
     builder.adjust(1)
 
