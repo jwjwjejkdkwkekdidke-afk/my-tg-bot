@@ -179,7 +179,7 @@ def welcome_text():
 def about_text():
     return (
         "ℹ️ <b>О сервисе AuraVPN</b>\n\n"
-        "<b>AuraVPN</b> — это ваш надежный инструмент для безопасного, анонимного и свободного интернета.\n\n"
+        "<b>AuraVPN</b> — ваш надежный инструмент для безопасного, анонимного и свободного интернета.\n\n"
         "🚀 <b>Наши преимущества:</b>\n"
         "• <b>Высокая скорость</b> — комфортный просмотр видео, игры и работа без задержек.\n"
         "• <b>Стабильность</b> — современные протоколы подключения, которые не подводят.\n"
@@ -669,4 +669,12 @@ async def main():
         await bot.delete_webhook(drop_pending_updates=True)
     except Exception as e:
         logging.warning(f"Ошибка webhook: {e}")
-    logging.info("AuraVPN успешно запущен
+    logging.info("AuraVPN успешно запущен!")
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logging.info("AuraVPN остановлен.")
