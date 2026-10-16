@@ -21,7 +21,7 @@ from aiogram.types import (
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "ВСТАВЬ_СЮДА_ТОКЕН")
 ADMIN_ID = 8052913358
-PAYMENT_CARD = "2204128123651537"
+PAYMENT_CARD = "2204120123651537"
 DB_FILE = "auravpn.db"
 
 
